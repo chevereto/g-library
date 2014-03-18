@@ -5,7 +5,6 @@
   G\ library
   http://gbackslash.com
 
-  @version	1.0.0
   @author	Rodolfo Berrios A. <http://rodolfoberrios.com/>
 
   Copyright (c) Rodolfo Berrios <inbox@rodolfoberrios.com> All rights reserved.
@@ -52,7 +51,6 @@ namespace G {
 			print_r($value);
 		}
 		echo '</pre>';
-		
 	}
 	
 	// Universal check for setted values for strings and arrays
@@ -397,7 +395,7 @@ namespace G {
 	}
 	
 	// http://stackoverflow.com/a/18602474
-	function time_elapsed_string($datetime, $full = false) {
+	function time_elapsed_string($datetime, $full=false) {
 		$now = new \DateTime(datetimegmt());
 		$ago = new \DateTime($datetime);
 		$diff = $now->diff($ago);
@@ -490,6 +488,47 @@ namespace G {
 	 
 	   return $client_ip;
 	 
+	}
+	
+	function get_client_languages($getSortedList=true, $acceptedLanguages=false) {
+
+		if (empty($acceptedLanguages)) {
+			$acceptedLanguages = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
+		}
+		
+		// regex inspired from @GabrielAnderson on http://stackoverflow.com/questions/6038236/http-accept-language
+		preg_match_all('/([a-z]{1,8}(-[a-z]{1,8})*)\s*(;\s*q\s*=\s*(1|0\.[0-9]+))?/i', $acceptedLanguages, $lang_parse);
+		$langs = $lang_parse[1];
+		$ranks = $lang_parse[4];
+		
+		// (create an associative array 'language' => 'preference')
+		$lang2pref = array();
+		for($i=0; $i<count($langs); $i++) {
+			$lang2pref[$langs[$i]] = (float) (!empty($ranks[$i]) ? $ranks[$i] : 1);
+		}
+		
+		$cmpLangs = function($a, $b) use ($lang2pref) {
+			if ($lang2pref[$a] > $lang2pref[$b]) {
+				return -1;
+			} else if($lang2pref[$a] < $lang2pref[$b]) {
+				return 1;
+			} else if(strlen($a) > strlen($b)) {
+				return -1;
+			} else if(strlen($a) < strlen($b)) {
+				return 1;
+			} else {
+				return 0;
+			}
+		};
+
+		uksort($lang2pref, $cmpLangs);
+
+		if ($getSortedList) {
+			return $lang2pref;
+		}
+		// return the first value's key
+		reset($lang2pref);
+		return key($lang2pref);
 	}
 	
 	/**
@@ -1160,10 +1199,16 @@ namespace G {
 			case 'static':
 				$rules = '<Files .*>'."\n".
 						 'order allow,deny'."\n".
-						 "deny from all"."\n".
+						 'deny from all'."\n".
 						 '</Files>'."\n\n". 
 						 'AddHandler cgi-script .php .php3 .phtml .pl .py .jsp .asp .htm .shtml .sh .cgi .fcgi'."\n".
 						 'Options -ExecCGI';
+			break;
+			case 'deny_php':
+				$rules = '<FilesMatch "\.php$">'."\n".
+						 'Order Deny,Allow'."\n".
+						 'Deny from all'."\n".
+						 '</FilesMatch>';
 			break;
 			case 'deny':
 				$rules = 'deny from all';
@@ -1660,11 +1705,16 @@ namespace G {
 // Global namespace
 namespace {
 
-	function class_autoloader($class) {
+	function class_autoloader($class) {		
 		$array = ['class' => $class, 'exists' => class_exists($class)];
 		$explode = explode('\\', $class);
 		$last_key = key(array_slice($explode, -1, 1, TRUE));
-		require_once(($explode[0] == 'G' ? G_PATH_CLASSES : G_APP_PATH_CLASSES) . 'class.' . strtolower($explode[$last_key]) . '.php');
+		$file = ($explode[0] == 'G' ? G_PATH_CLASSES : G_APP_PATH_CLASSES) . 'class.' . strtolower($explode[$last_key]) . '.php';
+		if(file_exists($file)) {
+			require_once($file);
+		} else {
+			trigger_error("Can't autoload ".$class.' class. Class should be at '. $file, E_USER_ERROR);
+		}
 	}
 	spl_autoload_register('class_autoloader');
 	

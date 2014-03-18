@@ -5,7 +5,6 @@
   G\ library
   http://gbackslash.com
 
-  @version	1.0.0
   @author	Rodolfo Berrios A. <http://rodolfoberrios.com/>
 
   Copyright (c) Rodolfo Berrios <inbox@rodolfoberrios.com> All rights reserved.

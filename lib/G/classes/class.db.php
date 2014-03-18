@@ -5,7 +5,6 @@
   G\ library
   http://gbackslash.com
 
-  @version	1.0.0
   @author	Rodolfo Berrios A. <http://rodolfoberrios.com/>
 
   Copyright (c) Rodolfo Berrios <inbox@rodolfoberrios.com> All rights reserved.
@@ -26,10 +25,10 @@ class DB {
 	private $port = G_APP_DB_PORT;
 	private $dbname = G_APP_DB_NAME;
 	private $driver = G_APP_DB_DRIVER;
-	
-	private $dbh;
 	private $pdo_attrs;
-	private $query;
+
+	public $dbh;
+	public $query;
 	
 	/**
 	 * Connect to the DB server
@@ -226,7 +225,6 @@ class DB {
 			throw new DBException('Wrong clause in ' . __METHOD__, 101);
 		}
 		
-		$preffix = rtrim($table, 's');
 		$table = DB::getTable($table);
 		
 		$query = 'SELECT * FROM '.$table;
@@ -234,7 +232,7 @@ class DB {
 		if(is_array($values) and !empty($values)) {
 			$query .= ' WHERE ';
 			foreach($values as $k => $v) {
-				$query .= $preffix.'_'.$k.'=:'.$preffix.'_'.$k.' '.$clause.' ';
+				$query .=$k.'=:'.$k.' '.$clause.' ';
 			}
 		}
 		
@@ -247,9 +245,9 @@ class DB {
 			if(!$sort['order']) {
 				$sort['order'] = 'desc';
 			}
-			$query .= ' ORDER BY '.$preffix.'_'.$sort['field'].' '.strtoupper($sort['order']).' ';
+			$query .= ' ORDER BY '.$sort['field'].' '.strtoupper($sort['order']).' ';
 		}
-
+		
 		if($limit and is_int($limit)) {
 			$query .= " LIMIT $limit";
 		}
@@ -259,7 +257,7 @@ class DB {
 			$db->query($query);
 			if(is_array($values)) {
 				foreach($values as $k => $v) {
-					$db->bind(':'.$preffix.'_'.$k, $v);
+					$db->bind(':'.$k, $v);
 				}
 			}
 			$db->exec();
@@ -322,7 +320,6 @@ class DB {
 			throw new DBException('Wrong clause in ' . __METHOD__, 101);
 		}
 		
-		$preffix = rtrim($table, 's');
 		$table = DB::getTable($table);
 		
 		$db = new DB;
@@ -330,13 +327,13 @@ class DB {
 		
 		// Set the value pairs
 		foreach($values as $k => $v) {
-			$query .= $preffix.'_'.$k.'=:'.$preffix.'_'.$k.','; 
+			$query .= $k.'=:'.$k.','; 
 		}
 		$query = rtrim($query, ',') . ' WHERE ';
 		
 		// Set the where pairs
 		foreach($wheres as $k => $v) {
-			$query .= $preffix.'_'.$k.'=:'.$preffix.'_'.$k.' '.$clause.' '; 
+			$query .= $k.'=:'.$k.' '.$clause.' '; 
 		}			
 		$query = rtrim($query, $clause.' ');
 		
@@ -344,10 +341,10 @@ class DB {
 			$db->query($query);
 			// Bind the values
 			foreach($values as $k => $v) {
-				$db->bind(':'.$preffix.'_'.$k, $v);
+				$db->bind(':'.$k, $v);
 			}
 			foreach($wheres as $k => $v) {
-				$db->bind(':'.$preffix.'_'.$k, $v);
+				$db->bind(':'.$k, $v);
 			}
 			return $db->exec();
 		} catch(Exception $e) {
@@ -365,24 +362,18 @@ class DB {
 			throw new DBException('Expecting array values, '.gettype($values).' given in '. __METHOD__, 100);
 		}
 		
-		$preffix = rtrim($table, 's');
 		$table = DB::getTable($table);
 		
-		$table_fields = array();
-		foreach($values as $k => $v) {
-			$table_fields[] = $preffix . '_' . $k;
-		}
-		
 		$query = 'INSERT INTO 
-					'.$table.' (' . ltrim(implode(',', $table_fields), ',') . ')
-					VALUES (' . ':' . str_replace(':', ',:', implode(':', $table_fields)) . ')
+					'.$table.' (' . ltrim(implode(',', $values), ',') . ')
+					VALUES (' . ':' . str_replace(':', ',:', implode(':', $values)) . ')
 				';
 				
 		try {
 			$db = new DB;
 			$db->query($query);
 			foreach($values as $k => $v) {
-				$db->bind(':'.$preffix.'_' . $k, $v);
+				$db->bind(':'.$k, $v);
 			}
 			$exec = $db->exec();
 			return $exec ? $db->lastInsertId() : $exec;
@@ -404,14 +395,13 @@ class DB {
 		if($clause == NULL) {
 			$clause = 'AND';
 		}
-		
-		$preffix = rtrim($table, 's') . '_';
+
 		$table = DB::getTable($table);
 		$query = 'DELETE FROM '.$table.' WHERE ';
 		
 		$table_fields = array();
 		foreach($values as $k => $v) {
-			$query .= $preffix.$k.'=:'.$preffix.$k.' '.$clause.' ';
+			$query .= $k.'=:'.$k.' '.$clause.' ';
 		}
 		$query = rtrim($query, $clause.' ');
 		
@@ -419,7 +409,7 @@ class DB {
 			$db = new DB;
 			$db->query($query);
 			foreach($values as $k => $v) {
-				$db->bind(':'.$preffix.$k, $v);
+				$db->bind(':'.$k, $v);
 			}
 			return $db->exec();
 		} catch(Exception $e) {
