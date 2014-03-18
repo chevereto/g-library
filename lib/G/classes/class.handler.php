@@ -159,7 +159,11 @@ class Handler {
 				'safe_request'	=> $_REQUEST ? safe_html($_REQUEST) : NULL,
 			);
 			
-			self::$vars = array_merge(self::$vars, $magic);
+			if(count(self::$vars) > 0) {
+				self::$vars = array_merge(self::$vars, $magic);
+			} else {
+				self::$vars = $magic;
+			}
 			
 			$routes[$this->base_request]($this);
 		} else {
