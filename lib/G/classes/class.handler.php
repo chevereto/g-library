@@ -74,26 +74,31 @@ class Handler {
 			$this->request_uri = str_replace($query_string, '/', $this->request_uri);
 		}
 		
-		$this->valid_request = rtrim(sanitize_path_slashes($this->request_uri), '/');
+		$this->valid_request = '/' . ltrim(rtrim(sanitize_path_slashes($this->request_uri), '/'), '/');
 		
 		if(!empty($_SERVER['QUERY_STRING'])) {
 			$this->request_uri = $_SERVER['REQUEST_URI'];
 			$this->valid_request .= '/' . $query_string;
 		}
-
-		/*** Build the canonical request ***/
-		// All the paths will have a trailing slash no matter in what we are (Linux, Windows, etc)
+		
+		// Store the canonical request, useful for redirect to a valid request
 		$this->canonical_request = $this->valid_request;
 		
 		if(is_dir(G_ROOT_PATH . $this->valid_request)) {
 			$this->canonical_request .= '/';
 		}
 		
-		$this->handled_request = $this->relative_root == '/' ? $this->valid_request : str_ireplace($this->relative_root, '', add_trailing_slashes($this->request_uri));
-		$this->request_array = explode('/', rtrim(str_replace('//', '/', str_replace('?', '/',$this->handled_request)), '/'));
+		$this->handled_request = $this->relative_root == '/' ? $this->valid_request : preg_replace('#' . $this->relative_root . '#', '/', $this->request_uri, 1);		
+		$this->request_array = explode('/', rtrim(str_replace('//', '/', str_replace('?', '/', ltrim($this->handled_request, '/'))), '/'));
+			
+		// Index request
+		if($this->request_array[0] == '') {
+			$this->request_array[0] = '/';
+		}
+		
 		$this->request_array = array_values(array_filter($this->request_array, 'strlen'));	
 		$this->base_request = $this->request_array[0];
-
+		
 		// Fix the canonical request /something?q= to /something/?q=
 		if($this->base_request !== '' && !empty($_SERVER['QUERY_STRING'])) {
 			$path_request = add_trailing_slashes(rtrim(str_replace($_SERVER['QUERY_STRING'], '', $this->canonical_request), '?'));
@@ -137,7 +142,7 @@ class Handler {
 		
 		$routes = self::$routes;
 		
-		if($this->base_request == '' or $this->base_request == 'index.php') {
+		if(in_array($this->base_request, ['', 'index.php', '/'])) {
 			$this->base_request = 'index';
 		}
 		
@@ -164,7 +169,11 @@ class Handler {
 				self::$vars = $magic;
 			}
 			
-			$routes[$this->base_request]($this);
+			// Only call a valid route fn
+			if(is_callable($routes[$this->base_request])) {
+				$routes[$this->base_request]($this);
+			}
+			
 		} else {
 			$this->template = 404;
 			$this->request = $this->request_array;

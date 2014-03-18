@@ -725,9 +725,9 @@ namespace G {
 		return str_replace(' ', '', $string);
 	}
 
-	// Sanitizes ///ugly//path/// to clean/path
+	// Sanitizes double or more slahes in a path
 	function sanitize_path_slashes($path) {
-		return rtrim(preg_replace('#/+#','/',$path), '/') . '/';
+		return preg_replace('#/+#','/', $path);
 	}
 	
 	function sanitize_relative_path($path) {
