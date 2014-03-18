@@ -23,7 +23,7 @@ define('G_VERSION', '1.0.0');
 // Error reporting setup
 @ini_set('log_errors', true);
 @ini_set('display_errors', true);
-error_reporting(E_ERROR | E_PARSE);
+error_reporting(E_ALL ^ E_NOTICE);
 if(isset($settings) and $settings['error_reporting'] === false) {
 	@ini_set('display_errors', false);
 	error_reporting(0);

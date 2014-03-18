@@ -364,9 +364,14 @@ class DB {
 		
 		$table = DB::getTable($table);
 		
+		$table_fields = [];
+		foreach($values as $k => $v) {
+			$table_fields[] = $k;
+		}
+		
 		$query = 'INSERT INTO 
-					'.$table.' (' . ltrim(implode(',', $values), ',') . ')
-					VALUES (' . ':' . str_replace(':', ',:', implode(':', $values)) . ')
+					'.$table.' (' . ltrim(implode(',', $table_fields), ',') . ')
+					VALUES (' . ':' . str_replace(':', ',:', implode(':', $table_fields)) . ')
 				';
 				
 		try {
