@@ -91,9 +91,9 @@ class Handler {
 		
 		$this->handled_request = $this->relative_root == '/' ? $this->valid_request : str_ireplace($this->relative_root, '', add_trailing_slashes($this->request_uri));
 		$this->request_array = explode('/', rtrim(str_replace('//', '/', str_replace('?', '/',$this->handled_request)), '/'));
-		$this->request_array = array_values(array_filter($this->request_array));
+		$this->request_array = array_values(array_filter($this->request_array, 'strlen'));	
 		$this->base_request = $this->request_array[0];
-		
+
 		// Fix the canonical request /something?q= to /something/?q=
 		if($this->base_request !== '' && !empty($_SERVER['QUERY_STRING'])) {
 			$path_request = add_trailing_slashes(rtrim(str_replace($_SERVER['QUERY_STRING'], '', $this->canonical_request), '?'));
@@ -142,7 +142,6 @@ class Handler {
 		}
 		
 		$this->template = $this->base_request;
-		
 		$this->request = $this->request_array;
 		unset($this->request[0]);
 		$this->request = array_values($this->request);

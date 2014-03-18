@@ -17,7 +17,7 @@
 namespace G {
 	
 	/**
-	 * ROUTE HELPERS -> nota to Handler
+	 * ROUTE HELPERS
 	 * ---------------------------------------------------------------------
 	 */
 	
