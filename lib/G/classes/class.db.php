@@ -34,9 +34,11 @@ class DB {
 	 * Connect to the DB server
 	 * Throws an Exception on error
 	 */
-	public function __construct() {
+	public function __construct($pdo_attrs=[]) {
 		
 		try {
+			
+			$this->pdo_attrs = $pdo_attrs;
 			
 			// SQL connection is slow if you use a hostname instead of an IP
 			// That's why this uses 127.0.0.1 if the host is localhost
@@ -47,12 +49,12 @@ class DB {
 			
 			// PDO defaults
 			$this->pdo_default_attrs = array(
-				PDO::ATTR_TIMEOUT	=> 30,
+				PDO::ATTR_TIMEOUT		=> 30,
 				PDO::ATTR_PERSISTENT	=> true
 			);
 			
 			// Override the PDO defaults ?
-			if($this->pdo_attrs) {
+			if(!is_null($this->pdo_attrs)) {
 				foreach($this->pdo_default_attrs as $key => $value) {
 					if($this->pdo_attrs[$key]) {
 						$this->pdo_default_attrs[$key] = $this->pdo_attrs[$key];
@@ -64,7 +66,7 @@ class DB {
 				$this->pdo_attrs = $this->pdo_default_attrs;
 			}
 			
-			// PDO overrides
+			// PDO hard overrides
 			$this->pdo_attrs[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
 			$this->pdo_attrs[PDO::ATTR_EMULATE_PREPARES] = true; // Depends on the driver
 			
@@ -152,6 +154,41 @@ class DB {
 	}
 	
 	/**
+	 * Query and fetch single record
+	 */
+	public static function queryFetchSingle($query, $fetch_style=NULL) {
+		try {
+			return self::queryFetch($query, 1, $fetch_style);
+		} catch(Exception $e) {
+			throw new DBException($e->getMessage(), 400);
+		}
+	}
+	
+	/**
+	 * Query and fetch all records
+	 */
+	public static function queryFetchAll($query, $fetch_style=NULL) {
+		try {
+			return self::queryFetch($query, NULL, $fetch_style);
+		} catch(Exception $e) {
+			throw new DBException($e->getMessage(), 400);
+		}
+	}
+	
+	/**
+	 * Query fetch (core version)
+	 */
+	public static function queryFetch($query, $limit=1, $fetch_style=NULL) {
+		try {
+			$db = new DB;
+			$db->query($query);
+			return $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
+		} catch(Exception $e) {
+			throw new DBException($e->getMessage(), 400);
+		}
+	}
+	
+	/**
 	 * Returns the number of rows affected by the last DELETE, INSERT, or UPDATE statement executed
 	 * http://php.net/manual/en/pdostatement.rowcount.php
 	 */
@@ -217,13 +254,7 @@ class DB {
 			throw new DBException('Expecting array values, '.gettype($values).' given in ' . __METHOD__, 100);
 		}
 		
-		if(!is_null($clause)) {
-			$clause = strtoupper($clause);
-		}
-		
-		if(is_array($values)  and !empty($values) and !is_null($clause) and !in_array($clause, array('AND', 'OR'))) {
-			throw new DBException('Wrong clause in ' . __METHOD__, 101);
-		}
+		self::validateClause($clause, __METHOD__);
 		
 		$table = DB::getTable($table);
 		
@@ -232,7 +263,7 @@ class DB {
 		if(is_array($values) and !empty($values)) {
 			$query .= ' WHERE ';
 			foreach($values as $k => $v) {
-				$query .=$k.'=:'.$k.' '.$clause.' ';
+				$query .= '`'.$k.'`=:'.$k.' '.$clause.' ';
 			}
 		}
 		
@@ -251,7 +282,7 @@ class DB {
 		if($limit and is_int($limit)) {
 			$query .= " LIMIT $limit";
 		}
-				
+		
 		try {
 			$db = new DB;
 			$db->query($query);
@@ -267,42 +298,7 @@ class DB {
 			throw new DBException($e->getMessage(), 400);
 		}
 	}
-	
-	/**
-	 * Query and fetch single record
-	 */
-	public static function queryFetchSingle($query, $fetch_style=NULL) {
-		try {
-			return self::queryFetch($query, 1, $fetch_style);
-		} catch(Exception $e) {
-			throw new DBException($e->getMessage(), 400);
-		}
-	}
-	
-	/**
-	 * Query and fetch all records
-	 */
-	public static function queryFetchAll($query, $fetch_style=NULL) {
-		try {
-			return self::queryFetch($query, NULL, $fetch_style);
-		} catch(Exception $e) {
-			throw new DBException($e->getMessage(), 400);
-		}
-	}
-	
-	/**
-	 * Query fetch (core version)
-	 */
-	public static function queryFetch($query, $limit=1, $fetch_style=NULL) {
-		try {
-			$db = new DB;
-			$db->query($query);
-			return $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
-		} catch(Exception $e) {
-			throw new DBException($e->getMessage(), 400);
-		}
-	}
-	
+			
 	/**
 	 * Update the target table row(s)
 	 */
@@ -315,25 +311,22 @@ class DB {
 			throw new DBException('Expecting array values, '.gettype($wheres).' given in '. __METHOD__, 100);
 		}
 		
-		$clause = strtoupper($clause);
-		if(!in_array($clause, array('AND', 'OR'))) {
-			throw new DBException('Wrong clause in ' . __METHOD__, 101);
-		}
+		self::validateClause($clause, __METHOD__);
 		
 		$table = DB::getTable($table);
 		
 		$db = new DB;
-		$query = 'UPDATE '.$table.' SET ';
+		$query = 'UPDATE `'.$table.'` SET ';
 		
 		// Set the value pairs
 		foreach($values as $k => $v) {
-			$query .= $k.'=:'.$k.','; 
+			$query .= '`'.$k.'`=:'.$k.','; 
 		}
 		$query = rtrim($query, ',') . ' WHERE ';
 		
 		// Set the where pairs
 		foreach($wheres as $k => $v) {
-			$query .= $k.'=:'.$k.' '.$clause.' '; 
+			$query .= '`'.$k.'`=:'.$k.' '.$clause.' '; 
 		}			
 		$query = rtrim($query, $clause.' ');
 		
@@ -370,10 +363,10 @@ class DB {
 		}
 		
 		$query = 'INSERT INTO 
-					'.$table.' (' . ltrim(implode(',', $table_fields), ',') . ')
+					`'.$table.'` (`' . ltrim(implode('`,`', $table_fields), '`,`') . '`)
 					VALUES (' . ':' . str_replace(':', ',:', implode(':', $table_fields)) . ')
 				';
-				
+		
 		try {
 			$db = new DB;
 			$db->query($query);
@@ -397,16 +390,14 @@ class DB {
 			throw new DBException('Expecting array values, '.gettype($values).' given in '. __METHOD__, 100);
 		}
 		
-		if($clause == NULL) {
-			$clause = 'AND';
-		}
+		self::validateClause($clause, __METHOD__);
 
 		$table = DB::getTable($table);
-		$query = 'DELETE FROM '.$table.' WHERE ';
+		$query = 'DELETE FROM `'.$table.'` WHERE ';
 		
 		$table_fields = array();
 		foreach($values as $k => $v) {
-			$query .= $k.'=:'.$k.' '.$clause.' ';
+			$query .= '`'.$k.'`=:'.$k.' '.$clause.' ';
 		}
 		$query = rtrim($query, $clause.' ');
 		
@@ -423,9 +414,21 @@ class DB {
 		
 	}
 	
+	/**
+	 * Validate clause
+	 */
+	private static function validateClause($clause, $method=NULL) {
+		if(!is_null($clause)) {
+			$clause = strtoupper($clause);
+			if(!in_array($clause, ['AND', 'OR'])) {
+				throw new DBException('Expecting clause string \'AND\' or \'OR\' in ' . (!is_null($method) ? $method : __CLASS__), 100);
+			}
+		}
+	}
+	
 }
 
-// dB class own Exception
+// DB class own Exception
 class DBException extends Exception {}
 
 ?>

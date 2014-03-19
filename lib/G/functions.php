@@ -1080,29 +1080,18 @@ namespace G {
 		return (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? true : false);
 	}
 
-	// Taken from http://it.php.net/manual/en/function.imagecreatefromgif.php#59787
-	function is_animated_image($file){
-		$filecontents = file_get_contents($file);
-		$str_loc = 0; $count = 0;
-		while($count<2) # There is no point in continuing after we find a 2nd frame
-		{
-			$where1=strpos($filecontents,'\x00\x21\xF9\x04',$str_loc);
-			if ($where1 === FALSE) {
-				break;
-			} else {
-				$str_loc=$where1+1;
-				$where2=strpos($filecontents,'\x00\x2C',$str_loc);
-				if($where2 === FALSE) {
-					break;
-				} else {
-					if($where1+8 == $where2) {
-						$count++;
-					}
-					$str_loc=$where2+1;
-				}
-			}
+	// Taken from http://php.net/manual/en/function.imagecreatefromgif.php#104473
+	function is_animated_image($filename){
+		if(!($fh = @fopen($filename, 'rb'))) {
+        	return false;
 		}
-		return ($count>1) ? true : false;
+		$count = 0;
+		while(!feof($fh) && $count < 2) {
+			$chunk = fread($fh, 1024 * 100); //read 100kb at a time
+			$count += preg_match_all('#\x00\x21\xF9\x04.{4}\x00(\x2C|\x21)#s', $chunk, $matches);
+		}
+		fclose($fh);
+		return $count > 1;
 	}
 
 
@@ -1193,26 +1182,28 @@ namespace G {
 	 * This creates .htaccess file on the target dir using the param rules
 	 * This can be also used to add rules to a existing .htaccess file
 	 */
-	function generate_htaccess($rules, $directory, $before='') {
+	function generate_htaccess($rules, $directory, $before=NULL, $output=false) {
+		
 		$htaccess = $directory.'.htaccess';
-		switch($rules) {
-			case 'static':
-				$rules = '<Files .*>'."\n".
-						 'order allow,deny'."\n".
-						 'deny from all'."\n".
-						 '</Files>'."\n\n". 
-						 'AddHandler cgi-script .php .php3 .phtml .pl .py .jsp .asp .htm .shtml .sh .cgi .fcgi'."\n".
-						 'Options -ExecCGI';
-			break;
-			case 'deny_php':
-				$rules = '<FilesMatch "\.php$">'."\n".
-						 'Order Deny,Allow'."\n".
-						 'Deny from all'."\n".
-						 '</FilesMatch>';
-			break;
-			case 'deny':
-				$rules = 'deny from all';
-			break;
+		
+		$rules_stock = [
+			'static'	=>  '<Files .*>'."\n".
+							'order allow,deny'."\n".
+							'deny from all'."\n".
+							'</Files>'."\n\n". 
+							'AddHandler cgi-script .php .php3 .phtml .pl .py .jsp .asp .htm .shtml .sh .cgi .fcgi'."\n".
+							'Options -ExecCGI',
+						 
+			'deny_php'	=>	'<FilesMatch "\.php$">'."\n".
+							'Order Deny,Allow'."\n".
+							'Deny from all'."\n".
+							'</FilesMatch>',
+							
+			'deny'		=>	'deny from all'
+		];
+		
+		if(array_key_exists($rules, $rules_stock)) {
+			$rules = $rules_stock[$rules];
 		}
 		
 		if(file_exists($htaccess)) {
@@ -1220,7 +1211,7 @@ namespace G {
 			if(strpos($fgc, $rules)) {
 				$done = true;
 			} else {
-				if(check_value($before)) {
+				if(!is_null($before)) {
 					$rules = str_replace($before, $rules."\n".$before, $fgc);
 					$f = 'w';
 				} else {
@@ -1236,12 +1227,12 @@ namespace G {
 			$fh = @fopen($htaccess, $f);
 			if(!$fh) return false;
 			if(fwrite($fh, $rules)) {
-				@fclose($fh); return true;
+				@fclose($fh); return $output ? $rules : true;
 			} else {
-				@fclose($fh); return false;
+				@fclose($fh); return $output ? $rules : false;
 			}
 		} else {
-			return true;
+			return $output ? $rules : true;
 		}
 	}
 	
