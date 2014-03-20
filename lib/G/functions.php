@@ -327,7 +327,7 @@ namespace G {
 				}   
 				$args = join(', ', $args);
 			}
-			$rtn .= sprintf('#%s %s(%s): %s(%s)\n',
+			$rtn .= sprintf("#%s %s(%s): %s(%s)\n",
 									 $count,
 									 isset($frame['file']) ? absolute_to_relative($frame['file']) : 'unknown file',
 									 isset($frame['line']) ? $frame['line'] : 'unknown line',

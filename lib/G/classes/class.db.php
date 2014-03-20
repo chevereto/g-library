@@ -301,7 +301,8 @@ class DB {
 	}
 			
 	/**
-	 * Update the target table row(s)
+	 * Update target table row(s)
+	 * Returns the number of affected rows or false
 	 */
 	public static function update($table, $values, $wheres, $clause='AND') {
 		
@@ -340,7 +341,7 @@ class DB {
 			foreach($wheres as $k => $v) {
 				$db->bind(':'.$k, $v);
 			}
-			return $db->exec();
+			return $db->exec() ? $db->rowCount() : false;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -348,7 +349,7 @@ class DB {
 	}
 	
 	/**
-	 * Insert row to the table
+	 * Insert single row to the table
 	 */
 	public static function insert($table, $values) {
 		
@@ -374,8 +375,7 @@ class DB {
 			foreach($values as $k => $v) {
 				$db->bind(':'.$k, $v);
 			}
-			$exec = $db->exec();
-			return $exec ? $db->lastInsertId() : $exec;
+			return $db->exec() ? $db->lastInsertId() : false;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -384,6 +384,7 @@ class DB {
 	
 	/**
 	 * Delete row(s) from table
+	 * Returns the number of affected rows or false
 	 */
 	public static function delete($table, $values, $clause='AND') {
 		
@@ -408,7 +409,7 @@ class DB {
 			foreach($values as $k => $v) {
 				$db->bind(':'.$k, $v);
 			}
-			return $db->exec();
+			return $db->exec() ? $db->rowCount() : false;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
