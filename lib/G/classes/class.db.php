@@ -48,10 +48,10 @@ class DB {
 			}
 			
 			// PDO defaults
-			$this->pdo_default_attrs = array(
+			$this->pdo_default_attrs = [
 				PDO::ATTR_TIMEOUT		=> 30,
 				PDO::ATTR_PERSISTENT	=> true
-			);
+			];
 			
 			// Override the PDO defaults ?
 			if(!is_null($this->pdo_attrs)) {
@@ -68,15 +68,16 @@ class DB {
 			
 			// PDO hard overrides
 			$this->pdo_attrs[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
-			$this->pdo_attrs[PDO::ATTR_EMULATE_PREPARES] = true; // Depends on the driver
-			
-			//if(version_compare(PHP_VERSION, "5.3.6", "<")) {
-				$this->pdo_attrs[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
-			//}
+			$this->pdo_attrs[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
 			
 			// Note that PDO::ERRMODE_SILENT has no effect on connection. Connections always throw an exception if it fails
 			$this->dbh = new PDO($pdo_connect, $this->user, $this->pass, $this->pdo_attrs);
-
+			
+			// PDO emulate prepares if needed
+			if(version_compare($this->dbh->getAttribute(PDO::ATTR_SERVER_VERSION), '5.1.17', '<')) {
+				$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+			}
+			
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -84,7 +85,7 @@ class DB {
 	}
 	
 	/**
-	 * Populates the class dB own PDO attributes array with an entire array
+	 * Populates the class DB own PDO attributes array with an entire array
 	 * Attribute list here: http://php.net/manual/en/pdo.setattribute.php
 	 */
 	public function setPDOAttrs($attributes) {
@@ -92,7 +93,7 @@ class DB {
 	}
 	
 	/**
-	 * Populates the class dB own PDO attributes array with a single key
+	 * Populates the class DB own PDO attributes array with a single key
 	 * Attributes list here: http://php.net/manual/en/pdo.setattribute.php
 	 */
 	public function setPDOAttr($key, $value) {
