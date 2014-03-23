@@ -33,13 +33,13 @@ if(isset($settings) and $settings['error_reporting'] === false) {
 @ini_set('default_charset', 'utf-8');
 
 // Can work with sessions?
-if(!@session_start()) die("Fatal error. This server can't work with sessions.");
+if(!@session_start()) die("G\: This server can't work with sessions.");
 
 // Set the starting execution time
 define('G_APP_TIME_EXECUTION_START', microtime(true));
 
 // Include G\ core functions
-(file_exists(__DIR__ . '/functions.php')) ? require_once(__DIR__ . '/functions.php') : die("Can't find <strong>" . __DIR__ . '/functions.php' . '</strong>. Make sure that this file exists.');
+(file_exists(__DIR__ . '/functions.php')) ? require_once(__DIR__ . '/functions.php') : die("G\: Can't find <strong>" . __DIR__ . '/functions.php' . '</strong>. Make sure that this file exists.');
 if(file_exists(__DIR__ . '/functions.render.php')) {
 	require_once(__DIR__ . '/functions.render.php');
 }
@@ -62,9 +62,10 @@ define('G_APP_PATH_CLASSES', G_APP_PATH_LIB . 'classes/');
 define('G_APP_FILE_FUNCTIONS', G_APP_PATH_LIB . 'functions.php');
 define('G_APP_FILE_FUNCTIONS_RENDER', G_APP_PATH_LIB . 'functions.render.php');
 
-// Include the static app config file
 define('G_APP_SETTINGS_FILE_ERROR', '<br />There are errors in the <strong>%%FILE%%</strong> file. Change the encodig to "UTF-8 without BOM" using Notepad++ or any similar code editor and remove any character before <span style="color: red;">&lt;?php</span> and after <span style="color: red;">?&gt;</span>');
-(file_exists(G_APP_PATH . 'settings.php')) ? require_once(G_APP_PATH . 'settings.php') : die("Can't find app/settings.php");
+
+// Include the static app config file
+(file_exists(G_APP_PATH . 'settings.php')) ? require_once(G_APP_PATH . 'settings.php') : die("G\: Can't find app/settings.php");
 if(headers_sent()) die(str_replace('%%FILE%%', 'app/settings.php', G_APP_SETTINGS_FILE_ERROR)); // Stop on premature headers
 
 // Set the default timezone
@@ -91,12 +92,11 @@ if(file_exists(G_APP_PATH . 'app.php')) {
 }
 
 // Set the DB constants
-define('G_APP_DB_HOST', $settings['db_host']);
-define('G_APP_DB_PORT', $settings['db_port']);
-define('G_APP_DB_NAME', $settings['db_name']);
-define('G_APP_DB_USER', $settings['db_user']);
-define('G_APP_DB_PASS', $settings['db_pass']);
-define('G_APP_DB_DRIVER', $settings['db_driver']);
+foreach(['db_host', 'db_port', 'db_name', 'db_user', 'db_pass', 'db_driver'] as $k) {
+	if(isset($settings[$k])) {
+		define('G_APP_'.strtoupper($k), $settings[$k]);
+	}
+}
 
 // Include app functions
 (file_exists(G_APP_FILE_FUNCTIONS)) ? require_once(G_APP_FILE_FUNCTIONS) : die("G\: Can't find <strong>" . G_APP_FILE_FUNCTIONS . '</strong>. Make sure that this file exists.');

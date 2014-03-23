@@ -385,8 +385,8 @@ namespace G {
 	
 	// http://stackoverflow.com/a/5878722
 	function is_valid_timezone($tzid){
-		$valid = array();
-		$tza = \DateTimeZone::listAbbreviations();
+		$valid = [];
+		$tza = timezone_abbreviations_list();
 		foreach ($tza as $zone)
 		foreach ($zone as $item)
 		  $valid[$item['timezone_id']] = true;

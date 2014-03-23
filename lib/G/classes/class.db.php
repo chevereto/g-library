@@ -27,7 +27,7 @@ class DB {
 	private $driver = G_APP_DB_DRIVER;
 	private $pdo_attrs;
 
-	public $dbh;
+	static $dbh;
 	public $query;
 	
 	/**
@@ -37,6 +37,11 @@ class DB {
 	public function __construct($pdo_attrs=[]) {
 		
 		try {
+			
+			// PDO already connected
+			if(isset(self::$dbh) and get_class(self::$dbh) == 'PDO') {
+				return true;
+			}
 			
 			$this->pdo_attrs = $pdo_attrs;
 			
@@ -70,12 +75,19 @@ class DB {
 			$this->pdo_attrs[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
 			$this->pdo_attrs[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
 			
+			// Turn off PHP error reporting just for the connection here (invalid hostnames will trigger a PHP Warning)
+			$error_reporting = error_reporting();
+			error_reporting(0);
+			
 			// Note that PDO::ERRMODE_SILENT has no effect on connection. Connections always throw an exception if it fails
-			$this->dbh = new PDO($pdo_connect, $this->user, $this->pass, $this->pdo_attrs);
+			self::$dbh = new PDO($pdo_connect, $this->user, $this->pass, $this->pdo_attrs);
+			
+			// Renable the error_reporting level
+			error_reporting($error_reporting);
 			
 			// PDO emulate prepares if needed
-			if(version_compare($this->dbh->getAttribute(PDO::ATTR_SERVER_VERSION), '5.1.17', '<')) {
-				$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+			if(version_compare(self::$dbh->getAttribute(PDO::ATTR_SERVER_VERSION), '5.1.17', '<')) {
+				self::$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 			}
 			
 		} catch(Exception $e) {
@@ -101,7 +113,7 @@ class DB {
 	}
 	
 	public function getAttr($attr) {
-		return $this->dbh->getAttribute($attr);
+		return self::$dbh->getAttribute($attr);
 	}
 	
 	/**
@@ -109,7 +121,7 @@ class DB {
 	 * http://php.net/manual/en/pdo.prepare.php
 	 */
 	public function query($query) {
-		$this->query = $this->dbh->prepare($query);
+		$this->query = self::$dbh->prepare($query);
 	}
 	
 	/**
@@ -202,7 +214,7 @@ class DB {
 	 * http://php.net/manual/en/pdo.lastinsertid.php
 	 */
 	public function lastInsertId() {
-		return $this->dbh->lastInsertId();
+		return self::$dbh->lastInsertId();
 	}
 	
 	/**
@@ -210,7 +222,7 @@ class DB {
 	 * http://php.net/manual/en/pdo.begintransaction.php
 	 */
 	public function beginTransaction(){
-		return $this->dbh->beginTransaction();
+		return self::$dbh->beginTransaction();
 	}
 	
 	/** 
@@ -218,7 +230,7 @@ class DB {
 	 * http://php.net/manual/en/pdo.commit.php
 	 */
 	public function endTransaction(){
-		return $this->dbh->commit();
+		return self::$dbh->commit();
 	}
 	
 	/**
@@ -226,7 +238,7 @@ class DB {
 	 * http://php.net/manual/en/pdo.rollback.php
 	 */
 	public function cancelTransaction(){
-		return $this->dbh->rollBack();
+		return self::$dbh->rollBack();
 	}
 	
 	/**

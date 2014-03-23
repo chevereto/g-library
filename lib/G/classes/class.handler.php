@@ -23,12 +23,12 @@ class Handler {
 	public static $routes = array();
 	
 	private static function routeIterator($path) {
-		if(!file_exists($path)) {
-			return;
-		}
+	
+		if(!file_exists($path)) return;
+		
 		foreach(new \DirectoryIterator($path) as $fileInfo) {
 			
-			if($fileInfo->isDot() || $fileInfo->isDir()) continue;
+			if($fileInfo->isDot() or $fileInfo->isDir()) continue;
 			
 			$route_file = $path . $fileInfo->getFilename();
 			$route_override = $path . 'overrides/' . $fileInfo->getFilename();
