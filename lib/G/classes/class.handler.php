@@ -19,41 +19,12 @@ use Exception;
  
 class Handler {
 
-	public static $route, $route_request, $doctitle, $vars, $cond;
-	public static $routes = array();
-	
-	private static function routeIterator($path) {
-	
-		if(!file_exists($path)) return;
-		
-		foreach(new \DirectoryIterator($path) as $fileInfo) {
-			
-			if($fileInfo->isDot() or $fileInfo->isDir()) continue;
-			
-			$route_file = $path . $fileInfo->getFilename();
-			$route_override = $path . 'overrides/' . $fileInfo->getFilename();
-			
-			if(file_exists($route_override)) {
-				$route_file = $route_override;
-			}
-			
-			if(file_exists($route_file)) {
-				require_once($route_file);
-				$route = array(substr(substr($fileInfo->getFilename(), 0, -4), 6) => $route);
-				self::$routes += $route;
-			}
-		}
-	}
-	
-	public static function stockRoutes() {
-		self::routeIterator(G_APP_PATH_ROUTES);
-		self::routeIterator(G_APP_PATH_ROUTES_OVERRIDES);
-	}
+	public static $route, $route_request, $doctitle, $vars, $cond, $routes;
 	
 	/**
-	 * Handler constructor: Built a valid request
+	 * Build a valid request
 	 */
-	function __construct($hook=array()) {
+	function __construct($hook=[]) {
 		
 		if(!defined('G_APP_PATH_THEME')) {
 			throw new HandlerException('G_APP_PATH_THEME is not defined', 100);
@@ -136,6 +107,41 @@ class Handler {
 	}
 	
 	/**
+	 * Iterate over the route app folder
+	 */
+	private static function routeIterator($path) {
+		
+		if(!file_exists($path)) return;
+		
+		foreach(new \DirectoryIterator($path) as $fileInfo) {
+			
+			if($fileInfo->isDot() or $fileInfo->isDir()) continue;
+			
+			$route_file = $path . $fileInfo->getFilename();
+			$route_override = $path . 'overrides/' . $fileInfo->getFilename();
+			
+			if(file_exists($route_override)) {
+				$route_file = $route_override;
+			}
+			
+			if(file_exists($route_file)) {
+				require_once($route_file);
+				$route = array(substr(substr($fileInfo->getFilename(), 0, -4), 6) => $route);
+				self::$routes += $route;
+			}
+		}
+	}
+	
+	/**
+	 * Stock (save) the valid routes of the G\ app
+	 */
+	public static function stockRoutes() {
+		self::$routes = [];
+		self::routeIterator(G_APP_PATH_ROUTES);
+		self::routeIterator(G_APP_PATH_ROUTES_OVERRIDES);
+	}
+	
+	/**
 	 * Process all the dynamic request to the system
 	 */
 	private function proccessRequest() {
@@ -211,23 +217,41 @@ class Handler {
 
 	}
 	
+	/**
+	 * Inject the 404 page
+	 */
 	public function issue404() {
 		$this->template = 404;
 	}
 	
+	/**
+	 * Return (bool) the request level of the current request
+	 */
 	public function isRequestLevel($level) {
 		return isset($this->request_array[$level - 1]);
 	}
-
+	
+	/**
+	 * Redirect to the base url/request
+	 */
 	public function baseRedirection($request) {
 		return str_replace($this->relative_root, '/', $this->base_url).ltrim($request, '/');
 	}
-
+	
+	/**
+	 * Return (bool) if the request is handled by index.php
+	 */
 	private function isIndex() {
 		return preg_match('{/index.php$}', $this->script_name);
 	}
-
-	private function loadTemplate() {
+	
+	/**
+	 * load the setted (or argumented) template
+	 */
+	private function loadTemplate($template=NULL) {
+		if(!is_null($template)) {
+			$this->template = $template;
+		}
 		if(file_exists($this->path_theme.'functions.php')) require_once($this->path_theme.'functions.php');
 		$template_file = $this->path_theme.$this->template.'.php';
 		if(file_exists($template_file)) {

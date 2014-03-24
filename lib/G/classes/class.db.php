@@ -19,6 +19,8 @@ use PDO, PDOException, Exception;
 
 class DB {
 	
+	private static $instance;
+	
 	private $host = G_APP_DB_HOST;
 	private $user = G_APP_DB_USER;
 	private $pass = G_APP_DB_PASS;
@@ -82,7 +84,7 @@ class DB {
 			// Note that PDO::ERRMODE_SILENT has no effect on connection. Connections always throw an exception if it fails
 			self::$dbh = new PDO($pdo_connect, $this->user, $this->pass, $this->pdo_attrs);
 			
-			// Renable the error_reporting level
+			// Re-enable the error_reporting level
 			error_reporting($error_reporting);
 			
 			// PDO emulate prepares if needed
@@ -94,6 +96,17 @@ class DB {
 			throw new DBException($e->getMessage(), 400);
 		}
 		
+	}
+	
+	/**
+	 * Singleton instance handler
+	 * Used for the static methods of this class
+	 */
+	public static function getInstance() {
+		if(is_null(self::$instance)) {
+			self::$instance = new self;
+		}
+		return self::$instance;
 	}
 	
 	/**
@@ -193,7 +206,7 @@ class DB {
 	 */
 	public static function queryFetch($query, $limit=1, $fetch_style=NULL) {
 		try {
-			$db = new DB;
+			$db =self::getInstance();
 			$db->query($query);
 			return $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
 		} catch(Exception $e) {
@@ -297,7 +310,7 @@ class DB {
 		}
 		
 		try {
-			$db = new DB;
+			$db = self::getInstance();
 			$db->query($query);
 			if(is_array($values)) {
 				foreach($values as $k => $v) {
@@ -328,8 +341,7 @@ class DB {
 		self::validateClause($clause, __METHOD__);
 		
 		$table = DB::getTable($table);
-		
-		$db = new DB;
+
 		$query = 'UPDATE `'.$table.'` SET ';
 		
 		// Set the value pairs
@@ -345,6 +357,7 @@ class DB {
 		$query = rtrim($query, $clause.' ');
 		
 		try {
+			$db = self::getInstance();
 			$db->query($query);
 			// Bind the values
 			foreach($values as $k => $v) {
@@ -382,7 +395,7 @@ class DB {
 				';
 		
 		try {
-			$db = new DB;
+			$db = self::getInstance();
 			$db->query($query);
 			foreach($values as $k => $v) {
 				$db->bind(':'.$k, $v);
@@ -416,7 +429,7 @@ class DB {
 		$query = rtrim($query, $clause.' ');
 		
 		try {
-			$db = new DB;
+			$db = self::getInstance();
 			$db->query($query);
 			foreach($values as $k => $v) {
 				$db->bind(':'.$k, $v);
