@@ -108,6 +108,7 @@ class Handler {
 	
 	/**
 	 * Iterate over the route app folder
+	 * This populates Handler::$routes with all the valid routes
 	 */
 	private static function routeIterator($path) {
 		
@@ -134,22 +135,29 @@ class Handler {
 	
 	/**
 	 * Stock (save) the valid routes of the G\ app
+	 * This method is optional because the routeIterator takes some memory
 	 */
 	public static function stockRoutes() {
 		self::$routes = [];
 		self::routeIterator(G_APP_PATH_ROUTES);
 		self::routeIterator(G_APP_PATH_ROUTES_OVERRIDES);
 	}
-	
+		
 	/**
-	 * Process all the dynamic request to the system
+	 * Process the dynamic request
 	 */
 	private function proccessRequest() {
 		
-		$routes = self::$routes;
-		
 		if(in_array($this->base_request, ['', 'index.php', '/'])) {
 			$this->base_request = 'index';
+		}
+		
+		// Route array is not set, use just one single self::$routes
+		if(is_null(self::$routes)) {
+			$route = self::getRouteFn($this->base_request);
+			$routes[$this->base_request] = $route;
+		} else {
+			$routes = self::$routes;
 		}
 		
 		$this->template = $this->base_request;
@@ -225,6 +233,27 @@ class Handler {
 	}
 	
 	/**
+	 * Get the route fn for a given route
+	 * If the route doesn't exists it will add it to the routes stack
+	 */
+	public function getRouteFn($route_name) {
+		// Route is already in the stack
+		if(is_array(self::$routes) and array_key_exists($route_name, Handler::$routes)) {
+			return self::$routes[$route_name];
+		}
+		// Route doesn't exists in the stack
+		$route_file = G_APP_PATH_ROUTES . 'route.'.$route_name.'.php';
+		if(file_exists($route_file)) {
+			require($route_file);
+			// Append this new route fn to the Handler::$routes stack
+			self::$routes[$route_name] = $route; 
+			return $route;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
 	 * Return (bool) the request level of the current request
 	 */
 	public function isRequestLevel($level) {
@@ -244,6 +273,7 @@ class Handler {
 	private function isIndex() {
 		return preg_match('{/index.php$}', $this->script_name);
 	}
+	
 	
 	/**
 	 * load the setted (or argumented) template

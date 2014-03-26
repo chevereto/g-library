@@ -120,7 +120,4 @@ if(isset($settings['theme']) and file_exists(G_APP_PATH_THEMES . $settings['them
 	define('BASE_URL_THEME', absolute_to_url(G_APP_PATH_THEME));
 }
 
-// Stock the $routes object
-Handler::stockRoutes();
-
 ?>

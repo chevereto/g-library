@@ -33,11 +33,6 @@ namespace G {
 		return Handler::$route_request[0];
 	}
 	
-	// Get the routes object
-	function get_routes_object(){
-		return get_global('routes');
-	}
-	
 	/**
 	 * GLOBAL HELPERS
 	 * ---------------------------------------------------------------------
