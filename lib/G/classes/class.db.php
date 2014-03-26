@@ -25,7 +25,7 @@ class DB {
 	private $user = G_APP_DB_USER;
 	private $pass = G_APP_DB_PASS;
 	private $port = G_APP_DB_PORT;
-	private $dbname = G_APP_DB_NAME;
+	private $name = G_APP_DB_NAME;
 	private $driver = G_APP_DB_DRIVER;
 	private $pdo_attrs;
 
@@ -36,20 +36,30 @@ class DB {
 	 * Connect to the DB server
 	 * Throws an Exception on error
 	 */
-	public function __construct($pdo_attrs=[]) {
+	public function __construct($conn=[], $pdo_attrs=[]) {
 		
 		try {
 			
 			// PDO already connected
-			if(isset(self::$dbh) and get_class(self::$dbh) == 'PDO') {
+			if(empty($conn) and isset(self::$dbh) and get_class(self::$dbh) == 'PDO') {
 				return true;
 			}
 			
 			$this->pdo_attrs = $pdo_attrs;
 			
+			// Inject connection info
+			if(!empty($conn)) {
+				$this->host = $conn['host'];
+				$this->user = $conn['user'];
+				$this->name = $conn['name'];
+				$this->pass = $conn['pass'];
+				$this->port = $conn['port'];
+				$this->driver = $conn['driver'];
+			}
+			
 			// SQL connection is slow if you use a hostname instead of an IP
-			// That's why this uses 127.0.0.1 if the host is localhost
-			$pdo_connect = $this->driver . ':host='. ($this->host == 'localhost' ? '127.0.0.1' : $this->host) .';dbname=' . $this->dbname;
+			// That's why this uses 127.0.0.1 if the host is localhost			
+			$pdo_connect = $this->driver . ':host='. ($this->host == 'localhost' ? '127.0.0.1' : $this->host) .';dbname=' . $this->name;
 			if($this->port) {
 				$pdo_connect .= ';port=' . $this->port;
 			}
@@ -77,7 +87,7 @@ class DB {
 			$this->pdo_attrs[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
 			$this->pdo_attrs[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
 			
-			// Turn off PHP error reporting just for the connection here (invalid hostnames will trigger a PHP Warning)
+			// Turn off PHP error reporting just for the connection here (invalid hostnames will trigger a PHP warning)
 			$error_reporting = error_reporting();
 			error_reporting(0);
 			
@@ -93,6 +103,7 @@ class DB {
 			}
 			
 		} catch(Exception $e) {
+			self::$dbh = NULL;
 			throw new DBException($e->getMessage(), 400);
 		}
 		
@@ -163,6 +174,10 @@ class DB {
 	
 	public function exec(){
 		return $this->query->execute();
+	}
+	
+	public function closeCursor() {
+		return $this->query->closeCursor();
 	}
 
 	public function fetchAll($mode=PDO::FETCH_ASSOC){
@@ -391,8 +406,7 @@ class DB {
 		
 		$query = 'INSERT INTO 
 					`'.$table.'` (`' . ltrim(implode('`,`', $table_fields), '`,`') . '`)
-					VALUES (' . ':' . str_replace(':', ',:', implode(':', $table_fields)) . ')
-				';
+					VALUES (' . ':' . str_replace(':', ',:', implode(':', $table_fields)) . ')';
 		
 		try {
 			$db = self::getInstance();

@@ -925,6 +925,18 @@ namespace G {
 		return get_base_url(preg_replace('#'.G_ROOT_PATH_RELATIVE.'#', '', $_SERVER['REQUEST_URI'], 1));
 	}
 	
+	function settings_has_db_info() {
+		$settings = get_global('settings');
+		$has = true;
+		foreach(['db_driver', 'db_host', 'db_name', 'db_user'] as $v) {
+			if(!isset($settings[$v])) {
+				$has = false;
+				break;
+			}
+		}
+		return $has;
+	}
+	
 	/**
 	 * Fetch the contents from an url
 	 * if $file is set the downloaed file will be saved there
