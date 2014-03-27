@@ -5,7 +5,6 @@
   G\ library
   http://gbackslash.com
 
-  @version	1.0.0
   @author	Rodolfo Berrios A. <http://rodolfoberrios.com/>
 
   Copyright (c) Rodolfo Berrios <inbox@rodolfoberrios.com> All rights reserved.
@@ -27,7 +26,13 @@ if(!defined('access') or !access) die('This file cannot be directly accessed.');
 (file_exists(dirname(dirname(__FILE__)) . '/lib/G/G.php')) ? require_once(dirname(dirname(__FILE__)) . '/lib/G/G.php') : die("Can't find lib/G/G.php");
 
 // We're getting fancy
-try {	
+try {
+	// Example hooking, inject the 404 page doctitle
+	$hook_after = function($handler) {
+		if($handler->template == 404) {
+			$handler::$vars['doctitle'] = 'Not found (404)';
+		}
+	};
 	$handy = new G\Handler(['before' => $hook_before, 'after' => $hook_after]);
 } catch(Exception $e) {
 	G\exception_to_error($e);

@@ -91,15 +91,30 @@ class Handler {
 		self::$route = $this->template !== 404 ? $this->request_array[0] == '' ? 'index' : $this->request_array : 404;
 		self::$route_request = $this->request_array;
 		
+		// Hook a fn BEFORE the process
 		if(is_array($hook) and is_callable($hook['before'])) {
 			$hook['before']($this);
 		}
 		
 		// It is a valid request on index.php?
-		if($this->isIndex()) $this->proccessRequest();
+		if($this->isIndex()) $this->processRequest();
 		
+		// Hook a fn AFTER the process
 		if(is_array($hook) and is_callable($hook['after'])) {
 			$hook['after']($this);
+		}
+		
+		// Auto-bind the route vars
+		if(is_array(self::$vars)) {
+			foreach(self::$vars as $k => $v) {
+				$this->bindGetFn($k, $v);
+			}
+		}
+		// Auto-bind the route conditionals
+		if(is_array(self::$cond)) {
+			foreach(self::$cond as $k => $v) {
+				$this->bindIsFn($k, $v);
+			}
 		}
 		
 		$this->loadTemplate();
@@ -146,14 +161,14 @@ class Handler {
 	/**
 	 * Process the dynamic request
 	 */
-	private function proccessRequest() {
+	private function processRequest() {
 		
 		if(in_array($this->base_request, ['', 'index.php', '/'])) {
 			$this->base_request = 'index';
 		}
 		
 		if(is_null(self::$routes)) { // Route array is not set
-			$route = self::getRouteFn($this->base_request);
+			$route = $this->getRouteFn($this->base_request);
 			if(is_callable($route)) {
 				$routes[$this->base_request] = $route; // Build a single $routes array
 			}
@@ -185,11 +200,12 @@ class Handler {
 			}
 			
 			// Only call a valid route fn
-			if(is_callable($routes[$this->base_request])) {
+			if(is_callable($routes[$this->base_request])) {	
 				$routes[$this->base_request]($this);
 			}
 			
 		} else {
+		
 			$this->template = 404;
 			$this->request = $this->request_array;
 		}
@@ -208,21 +224,26 @@ class Handler {
 			}
 		}
 		
-		// Auto-bind the route vars
-		if(is_array(self::$vars)) {
-			foreach(self::$vars as $k => $v) {
-				$fn_name = strtolower(str_replace('-', '_', $k));
-				eval('function get_' . $fn_name . '(){ return G\Handler::$vars["' . $k . '"]; }');
-			}
+	}
+	
+	/**
+	 * Bind route var to global functions
+	 */
+	public function bindGetFn($var, $value) {
+		$fn_name = strtolower(str_replace('-', '_', $var));
+		if(!function_exists('get_' . $fn_name)) {
+			eval('function get_' . $fn_name . '(){ return G\Handler::$vars["' . $var . '"]; }');
 		}
-		
-		// Auto-bind the route conditionals
-		if(is_array(self::$cond)) {
-			foreach(self::$cond as $k => $v) {
-				eval('function is_' . strtolower(str_replace('-', '_', $k)) . '(){ return G\Handler::$cond["' . $k . '"]; }');
-			}
+	}
+	
+	/**
+	 * Bind route conditional to global functions
+	 */
+	public function bindIsFn($var, $value) {
+		$fn_name = strtolower(str_replace('-', '_', $var));
+		if(!function_exists('is_' . $fn_name)) {
+			eval('function is_' . $fn_name . '(){ return G\Handler::$cond["' . $var . '"]; }');
 		}
-
 	}
 	
 	/**

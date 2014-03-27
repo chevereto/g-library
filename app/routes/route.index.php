@@ -5,7 +5,7 @@ $route = function($handler) {
 	// We will stock a few system values and bind them to get_system_values();
 	$system_values = [
 		'g_version' => [
-			'label' => 'G version',
+			'label' => 'G\\ version',
 			'content' => G\get_version()
 		],
 		'php_version' => [
