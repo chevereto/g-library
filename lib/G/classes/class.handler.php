@@ -85,7 +85,7 @@ class Handler {
 
 		// If the request is invalid we make a 301 redirection to the canonical url.
 		if($this->relative_root !== $this->request_uri and $this->canonical_request !== $this->request_uri) {
-			redirect($this->baseRedirection($this->canonical_request), 301);
+			$this->baseRedirection($this->canonical_request);
 		}
 		
 		self::$route = $this->template !== 404 ? $this->request_array[0] == '' ? 'index' : $this->request_array : 404;
@@ -285,7 +285,9 @@ class Handler {
 	 * Redirect to the base url/request
 	 */
 	public function baseRedirection($request) {
-		return str_replace($this->relative_root, '/', $this->base_url).ltrim($request, '/');
+		$request = trim(sanitize_path_slashes($request), '/');
+		$url = preg_replace('{'.$this->relative_root.'}', '/', $this->base_url, 1) . $request;
+		redirect($url, 301);
 	}
 	
 	/**
