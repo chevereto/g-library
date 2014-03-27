@@ -152,10 +152,11 @@ class Handler {
 			$this->base_request = 'index';
 		}
 		
-		// Route array is not set, use just one single self::$routes
-		if(is_null(self::$routes)) {
+		if(is_null(self::$routes)) { // Route array is not set
 			$route = self::getRouteFn($this->base_request);
-			$routes[$this->base_request] = $route;
+			if(is_callable($route)) {
+				$routes[$this->base_request] = $route; // Build a single $routes array
+			}
 		} else {
 			$routes = self::$routes;
 		}
@@ -165,7 +166,7 @@ class Handler {
 		unset($this->request[0]);
 		$this->request = array_values($this->request);
 		
-		if(array_key_exists($this->base_request, $routes)) {
+		if(is_array($routes) and array_key_exists($this->base_request, $routes)) {
 			
 			// Autoset some magic
 			$magic = array(
@@ -191,7 +192,6 @@ class Handler {
 		} else {
 			$this->template = 404;
 			$this->request = $this->request_array;
-			$routes['index']($this);
 		}
 		
 		self::$cond['404'] = false;
