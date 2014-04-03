@@ -26,5 +26,4 @@ $route = function($handler) {
 		]
 	];
 	$handler::$vars['system_values'] = $system_values;
-}
-?>
+};

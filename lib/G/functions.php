@@ -1711,7 +1711,8 @@ namespace {
 		if(file_exists($file)) {
 			require_once($file);
 		} else {
-			trigger_error("Can't autoload ".$class.' class. Class should be at '. $file, E_USER_ERROR);
+			//trigger_error("Can't autoload ".$class.' class. Class should be at '. $file, E_USER_ERROR);
+			// Don't trigger an error so it allows multiple autoloaders to be called
 		}
 	}
 	spl_autoload_register('class_autoloader');
@@ -1936,4 +1937,3 @@ namespace {
 	}
 
 }
-?>

@@ -128,5 +128,3 @@ function json_output($data=array(), $callback="") {
 	}
 	die();
 }
-
-?>

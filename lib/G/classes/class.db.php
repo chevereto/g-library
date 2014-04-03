@@ -333,8 +333,7 @@ class DB {
 				}
 			}
 			$db->exec();
-			$user_db = $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
-			return $user_db;
+			return $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -471,5 +470,3 @@ class DB {
 
 // DB class own Exception
 class DBException extends Exception {}
-
-?>

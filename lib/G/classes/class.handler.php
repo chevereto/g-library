@@ -317,5 +317,3 @@ class Handler {
 }
 
 class HandlerException extends Exception {}
-
-?>

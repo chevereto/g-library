@@ -18,7 +18,7 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.1');
+define('G_VERSION', '1.0.2');
 
 // Error reporting setup
 @ini_set('log_errors', true);
@@ -119,5 +119,3 @@ if(isset($settings['theme']) and file_exists(G_APP_PATH_THEMES . $settings['them
 	define('G_APP_PATH_THEME', G_APP_PATH_THEMES . $settings['theme'].'/');
 	define('BASE_URL_THEME', absolute_to_url(G_APP_PATH_THEME));
 }
-
-?>

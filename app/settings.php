@@ -26,5 +26,3 @@ $settings = [
 	'db_pass'	=> '', // Database user password
 	'db_table_prefix'	=> '' // Table prefix (default chv)
 ];
-
-?>
