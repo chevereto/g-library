@@ -18,16 +18,11 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.2');
+define('G_VERSION', '1.0.3');
 
 // Error reporting setup
 @ini_set('log_errors', true);
-@ini_set('display_errors', true);
 error_reporting(E_ALL ^ E_NOTICE);
-if(isset($settings) and $settings['error_reporting'] === false) {
-	@ini_set('display_errors', false);
-	error_reporting(0);
-}
 
 // Set the encoding to UTF-8
 @ini_set('default_charset', 'utf-8');
@@ -62,11 +57,15 @@ define('G_APP_PATH_CLASSES', G_APP_PATH_LIB . 'classes/');
 define('G_APP_FILE_FUNCTIONS', G_APP_PATH_LIB . 'functions.php');
 define('G_APP_FILE_FUNCTIONS_RENDER', G_APP_PATH_LIB . 'functions.render.php');
 
-define('G_APP_SETTINGS_FILE_ERROR', '<br />There are errors in the <strong>%%FILE%%</strong> file. Change the encodig to "UTF-8 without BOM" using Notepad++ or any similar code editor and remove any character before <span style="color: red;">&lt;?php</span> and after <span style="color: red;">?&gt;</span>');
+define('G_APP_SETTINGS_FILE_ERROR', '<br />There are errors in the <strong>%%FILE%%</strong> file. Change the encodig to "UTF-8 without BOM" using Notepad++ or any similar code editor and remove any character before <span style="color: red;">&lt;?php</span>');
 
 // Include the static app config file
 (file_exists(G_APP_PATH . 'settings.php')) ? require_once(G_APP_PATH . 'settings.php') : die("G\: Can't find app/settings.php");
 if(headers_sent()) die(str_replace('%%FILE%%', 'app/settings.php', G_APP_SETTINGS_FILE_ERROR)); // Stop on premature headers
+
+if(isset($settings) and $settings['error_reporting'] === false) {
+	error_reporting(0);
+}
 
 // Set the default timezone
 if(isset($settings['default_timezone']) and is_valid_timezone($settings['default_timezone'])) {
