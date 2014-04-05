@@ -205,8 +205,7 @@ class Handler {
 			}
 			
 		} else {
-		
-			$this->template = 404;
+			$this->issue404();
 			$this->request = $this->request_array;
 		}
 		
@@ -250,6 +249,7 @@ class Handler {
 	 * Inject the 404 page
 	 */
 	public function issue404() {
+		set_status_header(404);
 		$this->template = 404;
 	}
 	
