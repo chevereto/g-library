@@ -56,10 +56,8 @@ class DB {
 				$this->port = $conn['port'];
 				$this->driver = $conn['driver'];
 			}
-			
-			// SQL connection is slow if you use a hostname instead of an IP
-			// That's why this uses 127.0.0.1 if the host is localhost			
-			$pdo_connect = $this->driver . ':host='. ($this->host == 'localhost' ? '127.0.0.1' : $this->host) .';dbname=' . $this->name;
+
+			$pdo_connect = $this->driver . ':host=' . $this->host . ';dbname=' . $this->name;
 			if($this->port) {
 				$pdo_connect .= ';port=' . $this->port;
 			}

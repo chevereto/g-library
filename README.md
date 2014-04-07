@@ -11,12 +11,12 @@ Documentation can be found at [G\ documentation](http://gbackslash.com/docs "G\ 
 
 ##License
 
-G\ is copyrighted by me (Rodolfo Berríos) and is released under the [MIT License](http://opensource.org/licenses/MIT). You can use G\ freely in any project you want no strings attached.
+G\ is copyrighted by Rodolfo Berríos and is released under the [MIT License](http://opensource.org/licenses/MIT). You can use G\ freely in any project you want no strings attached.
 
 ##Contribute
 
 ###Help and support
-G\ is a non-profit project backed by my companies ([Chevereto](https://chevereto.com/) and [Junkstr](http://www.junkstr.com/)) and I gratefully accept any kind of help that you may want to give me like reporting bugs, fix errors, talk about G\ with your friends, etc. G\ is about making PHP more fun and for that any help is appreciated.
+G\ is a non-profit project backed by [Chevereto](https://chevereto.com/) and [Junkstr](http://www.junkstr.com/) (both companies of Rodolfo Berríos) and we gratefully accept any kind of help that you may want to give me like reporting bugs, fix errors, talk about G\ with your friends, etc. G\ is about making PHP better and for that any help is appreciated.
 
 ###Code
 If you want to contribute to G\ feel free to use this very same repo.
