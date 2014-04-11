@@ -59,8 +59,8 @@ class Handler {
 			$this->canonical_request .= '/';
 		}
 		
-		$this->handled_request = $this->relative_root == '/' ? $this->valid_request : preg_replace('#' . $this->relative_root . '#', '/', $this->request_uri, 1);		
-		$this->request_array = explode('/', rtrim(str_replace('//', '/', str_replace('?', '/', ltrim($this->handled_request, '/'))), '/'));
+		$this->handled_request = strtok($this->relative_root == '/' ? $this->valid_request : preg_replace('#' . $this->relative_root . '#', '/', $this->request_uri, 1),'?');
+		$this->request_array = explode('/', rtrim(str_replace('//', '/', ltrim($this->handled_request, '/')), '/'));
 			
 		// Index request
 		if($this->request_array[0] == '') {
