@@ -224,7 +224,7 @@ namespace G {
 			'/\<ul.*?\>(.*?)\<\/ul\>/is',
 			'/\<li\>(.*?)\<\/li\>/is',
 			'/\<img(.*?) src=\"(.*?)\" alt=\"(.*?)\" title=\"Smile(y?)\" \/\>/is',
-			'/\<img(.*?) src=\"http:\/\/(.*?)\" (.*?)\>/is',
+			'/\<img(.*?) src=\"(.*?)\" (.*?)\>/is',
 			'/\<img(.*?) src=\"(.*?)\" alt=\":(.*?)\" .*? \/\>/is',
 			'/\<div class=\"quotecontent\"\>(.*?)\<\/div\>/is',
 			'/\<div class=\"codecontent\"\>(.*?)\<\/div\>/is', 
@@ -248,7 +248,7 @@ namespace G {
 			'[list]$1[/list]',
 			'[*]$1',
 			'$3',
-			'[img]http://$2[/img]',
+			'[img]$2[/img]',
 			':$3',
 			'\[quote\]$1\[/quote\]',
 			'\[code\]$1\[/code\]',
@@ -293,7 +293,7 @@ namespace G {
 		error_log($e);
 		
 		$message = [];
-		$message[] = '<b>Fatal error ['.$e->getCode().']:</b> ' . $e->getMessage();
+		$message[] = '<b>Fatal error ['.$e->getCode().']:</b> ' . safe_html($e->getMessage());
 		$message[] = 'Triggered in ' . absolute_to_relative($e->getFile()) . ' at line ' . $e->getLine() . "\n";
 		$message[] = '<b>Stack trace:</b>';
 		
@@ -304,30 +304,43 @@ namespace G {
 			if (isset($frame['args'])) {
 				$args = array();
 				foreach ($frame['args'] as $arg) {
-					if (is_string($arg)) {
-						$args[] = "'" . $arg . "'";
-					} elseif (is_array($arg)) {
-						$args[] = "Array";
-					} elseif (is_null($arg)) {
-						$args[] = 'NULL';
-					} elseif (is_bool($arg)) {
-						$args[] = ($arg) ? 'true' : 'false';
-					} elseif (is_object($arg)) {
-						$args[] = get_class($arg);
-					} elseif (is_resource($arg)) {
-						$args[] = get_resource_type($arg);
-					} else {
-						$args[] = $arg;
-					}   
+					switch(true) {
+						case is_string($arg):
+							if(file_exists($arg)) {
+								$arg = absolute_to_relative($arg);
+							}
+							$args[] = "'" . $arg . "'";
+						break;
+						case is_array($arg):
+							$args[] = "Array";
+						break;
+						case is_null($arg):
+							$args[] = 'NULL';
+						break;
+						case is_bool($arg):
+							$args[] = ($arg) ? 'true' : 'false';
+						break;
+						case is_object($arg):
+							$args[] = get_class($arg);
+						break;
+						case is_resource($arg):
+							$args[] = get_resource_type($arg);
+						break;
+						default:
+							$args[] = $arg;
+						break;
+					}
+
 				}   
 				$args = join(', ', $args);
 			}
+			
 			$rtn .= sprintf("#%s %s(%s): %s(%s)\n",
-									 $count,
-									 isset($frame['file']) ? absolute_to_relative($frame['file']) : 'unknown file',
-									 isset($frame['line']) ? $frame['line'] : 'unknown line',
-									 (isset($frame['class']))  ? $frame['class'].$frame['type'].$frame['function'] : $frame['function'],
-									 $args );
+						$count,
+						isset($frame['file']) ? absolute_to_relative($frame['file']) : 'unknown file',
+						isset($frame['line']) ? $frame['line'] : 'unknown line',
+						(isset($frame['class'])) ? $frame['class'].$frame['type'].$frame['function'] : $frame['function'],
+						$args);
 			$count++;
 		}
 		$message[] = $rtn;
