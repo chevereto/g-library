@@ -88,7 +88,7 @@ class Handler {
 			$this->baseRedirection($this->canonical_request);
 		}
 		
-		self::$route = $this->template !== 404 ? $this->request_array[0] == '' ? 'index' : $this->request_array : 404;
+		self::$route = $this->template !== 404 ? $this->request_array[0] == '/' ? 'index' : $this->request_array : 404;
 		self::$route_request = $this->request_array;
 		
 		// Hook a fn BEFORE the process
