@@ -62,6 +62,11 @@ function get_app_lib_file_url($string){
 	return G_APP_LIB_URL . $string;
 }
 
+// Returns the HTML input with the auth token
+function get_input_auth_token($name='auth_token') {
+	return '<input type="hidden" name="'.$name.'" value="'.G\Handler::getAuthToken().'">';
+}
+
 
 /**
  * NON HTML OUTPUT

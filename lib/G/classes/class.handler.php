@@ -191,8 +191,9 @@ class Handler {
 				'safe_post'		=> $_POST ? safe_html($_POST) : NULL,
 				'safe_get'		=> $_GET ? safe_html($_GET) : NULL,
 				'safe_request'	=> $_REQUEST ? safe_html($_REQUEST) : NULL,
+				'auth_token' 	=> self::getAuthToken()
 			);
-			
+
 			if(count(self::$vars) > 0) {
 				self::$vars = array_merge(self::$vars, $magic);
 			} else {
@@ -297,7 +298,6 @@ class Handler {
 		return preg_match('{/index.php$}', $this->script_name);
 	}
 	
-	
 	/**
 	 * load the setted (or argumented) template
 	 */
@@ -312,6 +312,23 @@ class Handler {
 		} else {
 			throw new HandlerException('Missing ' . absolute_to_relative($template_file) . ' template file', 400);
 		}
+	}
+	
+	/**
+	 * Returns the 40 char length safe request token
+	 */
+	public static function getAuthToken() {
+		$token = isset($_SESSION['G_auth_token']) ? $_SESSION['G_auth_token'] : random_string(40);
+		$_SESSION['G_auth_token'] = $token;
+		return $token;
+	}
+	
+	/**
+	 * Checks the integrity and validation of the given request token
+	 */
+	public static function checkAuthToken($token) {
+		if(strlen($token) < 40) return false;
+		return timing_safe_compare($_SESSION['G_auth_token'], $token);
 	}
 
 }
