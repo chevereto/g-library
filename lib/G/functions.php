@@ -971,7 +971,7 @@ namespace G {
 			curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 			curl_setopt($ch, CURLOPT_HEADER, 0);
-			curl_setopt($ch, CURLOPT_FAILONERROR, true);
+			curl_setopt($ch, CURLOPT_FAILONERROR, false);
 			curl_setopt($ch, CURLOPT_ENCODING, 'gzip'); // this needs zlib output compression enabled (php)
 			
 			if($file) {
@@ -991,8 +991,8 @@ namespace G {
 			}
 			
 			if(curl_errno($ch)) {
-				throw new \Exception('curl error: ' . curl_error($ch));
 				curl_close($ch);
+				throw new \Exception('curl error: ' . curl_error($ch));
 				return false;
 			}
 			
@@ -1055,10 +1055,9 @@ namespace G {
 	}
 
 	// Tell if the string is an URL and if is valid
-	// nota: deprecated
 	function is_valid_url($string) {
 	
-		if(is_url($string)){
+		if(!is_url($string)){
 			return false;
 		}
 		
