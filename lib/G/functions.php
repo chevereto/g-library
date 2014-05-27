@@ -1268,6 +1268,12 @@ namespace G {
 		$original_filename = substr($original_filename, 0, -(strlen($extension) + 1));
 		$original_filename = unaccent_string($original_filename); // change áéíóú to aeiou
 		$original_filename = preg_replace('/[^\.\w\d-]/i', '', $original_filename); // remove any non alphanumeric, non underscore, non hyphen and non period
+		
+		// Non alphanumeric name uh..
+		if(strlen($original_filename) == 0) {
+			$original_filename = random_string(16);
+		}
+		
 		$original_filename = substr($original_filename, 0, 200);
 
 		switch($method){
