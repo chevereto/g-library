@@ -1412,7 +1412,7 @@ namespace G {
 				$name = $original_filename;
 			break;
 			case 'random':
-				$name = random_string(rand(5, 10));
+				$name = random_string(16); // 7.958661109946401e+24
 			break;
 			case 'mixed':
 				if(strlen($original_filename) >= $max_lenght) {
