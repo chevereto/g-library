@@ -65,7 +65,7 @@ class DB {
 			// PDO defaults
 			$this->pdo_default_attrs = [
 				PDO::ATTR_TIMEOUT		=> 30,
-				PDO::ATTR_PERSISTENT	=> true
+				//PDO::ATTR_PERSISTENT	=> false
 			];
 			
 			// Override the PDO defaults ?
@@ -358,25 +358,25 @@ class DB {
 		
 		// Set the value pairs
 		foreach($values as $k => $v) {
-			$query .= '`'.$k.'`=:'.$k.','; 
+			$query .= '`'.$k.'`=:value_'.$k.','; 
 		}
 		$query = rtrim($query, ',') . ' WHERE ';
 		
 		// Set the where pairs
 		foreach($wheres as $k => $v) {
-			$query .= '`'.$k.'`=:'.$k.' '.$clause.' '; 
+			$query .= '`'.$k.'`=:where_'.$k.' '.$clause.' '; 
 		}			
-		$query = rtrim($query, $clause.' ');
+		$query = rtrim($query, $clause.' ');	
 		
 		try {
 			$db = self::getInstance();
 			$db->query($query);
 			// Bind the values
 			foreach($values as $k => $v) {
-				$db->bind(':'.$k, $v);
+				$db->bind(':value_'.$k, $v);
 			}
 			foreach($wheres as $k => $v) {
-				$db->bind(':'.$k, $v);
+				$db->bind(':where_'.$k, $v);
 			}
 			return $db->exec() ? $db->rowCount() : false;
 		} catch(Exception $e) {

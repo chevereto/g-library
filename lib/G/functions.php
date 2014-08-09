@@ -212,6 +212,12 @@ namespace G {
         return number_format($n);
     }
 	
+	function nullify_string(&$string) {
+		if($string == '') {
+			$string = NULL;
+		}
+	}
+	
 	/**
 	 * Convert HTML code to BBCode
 	 * http://kuikie.com/snippets/snippet.php/90-17/php-function-to-convert-bbcode-to-html
@@ -765,7 +771,7 @@ namespace G {
 	function unaccent_string($string) {
 		$string = (string)$string;
 		
-		if(!function_exists('mb_detect_encoding')) {
+		if(function_exists('mb_detect_encoding')) {
 			$utf8 = strtolower(mb_detect_encoding($string)) == 'utf-8';
 		} else {
 			$length = strlen($string);
@@ -1216,7 +1222,8 @@ namespace G {
 	// Tell if the string is an image URL
 	function is_image_url($string) {
 		if(!is_string($string)) return false;
-		return preg_match('/(?:ftp|https?):\/\/(\w+:\w+@)?(?:[-\w])+([-\w\.])*\.[a-z]{2,6}(?:\/[^\/#\?]+)+\.(?:jpe?g|gif|png|bmp)/i', $string);
+		return preg_match('/(?:ftp|https?):\/\/(\w+:\w+@)?([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,4}){0,1}|(?:[\w\-]+\.)+[a-z]{2,6})(?:\/[^\/#\?]+)+\.(?:jpe?g|gif|png|bmp)/i', $string);
+		
 	}
 
 	// Returns true if the system is in development mode

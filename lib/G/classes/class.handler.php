@@ -55,7 +55,7 @@ class Handler {
 		// Store the canonical request, useful for redirect to a valid request
 		$this->canonical_request = $this->valid_request;
 		
-		if(is_dir(G_ROOT_PATH . $this->valid_request)) {
+		if(is_dir(G_ROOT_PATH . $this->valid_request) && $this->valid_request !== '/') {
 			$this->canonical_request .= '/';
 		}
 		
