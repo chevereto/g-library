@@ -160,13 +160,17 @@ namespace G {
 	 * ---------------------------------------------------------------------
 	 */
 	
-	// Sanitize array
-	function array_filter_array($array, $filter, $get='exclusion') {
+	// Filter array
+	function array_filter_array($array, $filter_keys, $get='exclusion') {
+		$arr = $array;
 		$return = [];
 		$get = strtolower($get);
-		foreach($filter as $v) {
+		$default_get = 'exclusion';
+		
+		foreach($filter_keys as $k => $v) {
 			switch($get) {
-				default: case 'exclusion':
+				default: case $default_get:
+					$get = $default_get;
 					if(!array_key_exists($v, $array)) continue;
 					$return[$v] = $array[$v];
 				break;
@@ -175,7 +179,7 @@ namespace G {
 				break;
 			}
 		}
-		return $get == 'exclusion' ? $return : $array;
+		return $get == $default_get ? $return : $array;
 	}
 	
 	function key_asort(&$array, $key) {
@@ -1003,13 +1007,19 @@ namespace G {
 	}
 
 	// Converts relative path to url
-	function relative_to_url($filepath) {
-		return str_replace(G_ROOT_PATH_RELATIVE, G_ROOT_URL, forward_slash($filepath));
+	function relative_to_url($filepath, $root_url=NULL) {
+		if(!check_value($root_url)) {
+			$root_url = G_ROOT_URL;
+		}
+		return str_replace(G_ROOT_PATH_RELATIVE, $root_url, forward_slash($filepath));
 	}
 
 	// Converts app URL to relative path
-	function url_to_relative($url) {
-		return str_replace(G_ROOT_URL, G_ROOT_PATH_RELATIVE, $url);
+	function url_to_relative($url, $root_url=NULL) {
+		if(!check_value($root_url)) {
+			$root_url = G_ROOT_URL;
+		}
+		return str_replace($root_url, G_ROOT_PATH_RELATIVE, $url);
 	}
 
 	// Converts absolute path to relative path
@@ -1018,16 +1028,22 @@ namespace G {
 	}
 
 	// Converts absolute path to URL
-	function absolute_to_url($filepath) {
-		if(G_ROOT_PATH === G_ROOT_PATH_RELATIVE) {
-			return G_ROOT_URL . ltrim($filepath, '/');
+	function absolute_to_url($filepath, $root_url=NULL) {
+		if(!check_value($root_url)) {
+			$root_url = G_ROOT_URL;
 		}
-		return str_replace(G_ROOT_PATH, G_ROOT_URL, forward_slash($filepath));
+		if(G_ROOT_PATH === G_ROOT_PATH_RELATIVE) {
+			return $root_url . ltrim($filepath, '/');
+		}
+		return str_replace(G_ROOT_PATH, $root_url, forward_slash($filepath));
 	}
 
 	// Converts app URL to absolute path
-	function url_to_absolute($url) {
-		return str_replace(G_ROOT_URL, G_ROOT_PATH, $url);
+	function url_to_absolute($url, $root_url=NULL) {
+		if(!check_value($root_url)) {
+			$root_url = G_ROOT_URL;
+		}
+		return str_replace($root_url, G_ROOT_PATH, $url);
 	}
 
 
@@ -1312,7 +1328,7 @@ namespace G {
 			'width'		=> intval($info[0]),
 			'height'	=> intval($info[1]),
 			'ratio'		=> intval($info[0]) / intval($info[1]),
-			'size'		=>	intval($filesize),
+			'size'		=> intval($filesize),
 			'size_formatted' => format_bytes($filesize),
 			'mime'		=> $mime,
 			'extension' => mime_to_extension($mime),

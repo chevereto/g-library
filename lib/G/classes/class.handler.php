@@ -330,6 +330,49 @@ class Handler {
 		if(strlen($token) < 40) return false;
 		return timing_safe_compare($_SESSION['G_auth_token'], $token);
 	}
+	
+	/**
+	 * Sets a Handler::$var - get_var() binding
+	 */
+	public static function setVar($var, $value) {
+		self::$vars[$var] = $value;
+	}
+	
+	/**
+	 * Sets a Handler::$cond -> is_cond() binding
+	 */
+	public static function setCond($cond, $bool) {
+		self::$cond[$cond] = !$bool ? false : true;
+	}
+	
+	/**
+	 * Get a Handler::$var
+	 */
+	public static function getVar($var) {
+		return self::$vars[$var];
+	}
+	
+	/**
+	 * Get a Handler::$cond
+	 */
+	public static function getCond($cond) {
+		return self::$cond[$cond];
+	}
+	
+	/**
+	 * Smart update a Handler::$vars
+	 */
+	public static function updateVar($var, $value) {
+		if(is_array(self::$vars[$var]) and is_array($value)) {
+			self::$vars[$var] = array_merge(self::$vars[$var], $value);
+		} else {
+			self::$vars[$var] = $value;
+		}
+	}
+	
+	public static function unsetVar($var) {
+		unset(self::$vars[$var]);
+	}
 
 }
 
