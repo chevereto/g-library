@@ -19,7 +19,7 @@ use Exception;
  
 class Handler {
 
-	public static $route, $route_request, $doctitle, $vars, $cond, $routes;
+	public static $route, $route_request, $base_request, $doctitle, $vars, $cond, $routes, $template_used;
 	
 	/**
 	 * Build a valid request
@@ -68,17 +68,17 @@ class Handler {
 		}
 		
 		$this->request_array = array_values(array_filter($this->request_array, 'strlen'));	
-		$this->base_request = $this->request_array[0];
+		self::$base_request = $this->request_array[0];
 		
 		// Fix the canonical request /something?q= to /something/?q=
-		if($this->base_request !== '' && !empty($_SERVER['QUERY_STRING'])) {
+		if(self::$base_request !== '' && !empty($_SERVER['QUERY_STRING'])) {
 			$path_request = add_trailing_slashes(rtrim(str_replace($_SERVER['QUERY_STRING'], '', $this->canonical_request), '?'));
 			$fixed_qs_request = $path_request.'?'.$_SERVER['QUERY_STRING'];
 			$this->canonical_request = $fixed_qs_request;
 		}
 		
 		// No /index.php request
-		if($this->base_request == 'index.php') {
+		if(self::$base_request == 'index.php') {
 			$this->canonical_request = rtrim($this->canonical_request, '/');
 			redirect((sanitize_path_slashes(str_replace('index.php', '', $this->canonical_request))), 301);
 		}
@@ -90,6 +90,16 @@ class Handler {
 		
 		self::$route = $this->template !== 404 ? $this->request_array[0] == '/' ? 'index' : $this->request_array : 404;
 		self::$route_request = $this->request_array;
+		
+		if(in_array(self::$base_request, ['', 'index.php', '/'])) {
+			self::$base_request = 'index';
+		}
+		
+		$this->template = self::$base_request;
+		$this->request = $this->request_array;
+		
+		unset($this->request[0]);
+		$this->request = array_values($this->request);
 		
 		// Hook a fn BEFORE the process
 		if(is_array($hook) and is_callable($hook['before'])) {
@@ -163,25 +173,16 @@ class Handler {
 	 */
 	private function processRequest() {
 		
-		if(in_array($this->base_request, ['', 'index.php', '/'])) {
-			$this->base_request = 'index';
-		}
-		
 		if(is_null(self::$routes)) { // Route array is not set
-			$route = $this->getRouteFn($this->base_request);
+			$route = $this->getRouteFn(self::$base_request);
 			if(is_callable($route)) {
-				$routes[$this->base_request] = $route; // Build a single $routes array
+				$routes[self::$base_request] = $route; // Build a single $routes array
 			}
 		} else {
 			$routes = self::$routes;
 		}
 		
-		$this->template = $this->base_request;
-		$this->request = $this->request_array;
-		unset($this->request[0]);
-		$this->request = array_values($this->request);
-		
-		if(is_array($routes) and array_key_exists($this->base_request, $routes)) {
+		if(is_array($routes) and array_key_exists(self::$base_request, $routes)) {
 			
 			// Autoset some magic
 			$magic = array(
@@ -199,10 +200,10 @@ class Handler {
 			} else {
 				self::$vars = $magic;
 			}
-			
+
 			// Only call a valid route fn
-			if(is_callable($routes[$this->base_request])) {	
-				$routes[$this->base_request]($this);
+			if(is_callable($routes[self::$base_request])) {	
+				$routes[self::$base_request]($this);
 			}
 			
 		} else {
@@ -210,10 +211,11 @@ class Handler {
 			$this->request = $this->request_array;
 		}
 		
-		self::$cond['404'] = false;
 		if($this->template == 404) {
 			self::$cond['404'] = true;
 			self::$route = 404;
+		} else {
+			self::$cond['404'] = false;
 		}
 		
 		if(self::$vars['pre_doctitle']) {
@@ -223,6 +225,8 @@ class Handler {
 				 self::$vars['doctitle'] .= ' - ' . $stock_doctitle;
 			}
 		}
+		
+		self::$template_used = $this->template;
 		
 	}
 	
@@ -264,7 +268,12 @@ class Handler {
 			return self::$routes[$route_name];
 		}
 		// Route doesn't exists in the stack
-		$route_file = G_APP_PATH_ROUTES . 'route.'.$route_name.'.php';
+		$filename = 'route.' . $route_name . '.php';
+		$route_file = G_APP_PATH_ROUTES . $filename;
+		$route_override_file = G_APP_PATH_ROUTES_OVERRIDES . $filename;
+		if(file_exists($route_override_file)) {
+			$route_file = $route_override_file;
+		}
 		if(file_exists($route_file)) {
 			require($route_file);
 			// Append this new route fn to the Handler::$routes stack
@@ -273,6 +282,16 @@ class Handler {
 		} else {
 			return false;
 		}
+	}
+	
+	/**
+	 * Maps the current route, useful to make route aliases
+	 */
+	public function mapRoute($route_name) {
+		$this->template = $route_name;
+		self::$base_request = $route_name;
+		self::setCond('mapped_route', true);
+		return $this->getRouteFn($route_name);
 	}
 	
 	/**
@@ -370,8 +389,18 @@ class Handler {
 		}
 	}
 	
+	/**
+	 * Unset a given var
+	 */
 	public static function unsetVar($var) {
 		unset(self::$vars[$var]);
+	}
+	
+	/**
+	 * Get the template file used
+	 */
+	public static function getTemplateUsed() {
+		return $this->template;
 	}
 
 }

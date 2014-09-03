@@ -22,15 +22,25 @@ namespace G {
 	 */
 	
 	function is_route($string){
-		return is_array(Handler::$route) ? in_array($string, Handler::$route) : Handler::$route == $string;
+		return Handler::$base_request == $string;
+	}
+	
+	function isRouteAvailable($string) {
+		return file_exists(G_APP_PATH_ROUTES . 'route.'.$string.'.php') or file_exists(G_APP_PATH_ROUTES_OVERRIDES . 'route.'.$string.'.php');
 	}
 	
 	function get_route_name() {
-		return is_array(Handler::$route) ? Handler::$route[0] : Handler::$route;
+		return Handler::$base_request;
 	}
 	
-	function get_route_request_name() {
-		return Handler::$route_request[0];
+	/*
+	function get_route_request_name() { // deprecated
+		return get_route_name();
+	}
+	*/
+	
+	function getTemplateUsed() {
+		return Handler::$template_used;
 	}
 	
 	/**
