@@ -170,7 +170,7 @@ namespace G {
 	 * ---------------------------------------------------------------------
 	 */
 	
-	// Filter array
+	// Filter array with another array
 	function array_filter_array($array, $filter_keys, $get='exclusion') {
 		$arr = $array;
 		$return = [];
@@ -204,6 +204,16 @@ namespace G {
 			$ret[$ii] = $array[$ii];
 		}
 		$array = $ret;
+	}
+	
+	/**
+	 * Recursive UTF-8 encode array
+	 */
+	function array_utf8encode(&$arr){
+		array_walk_recursive($arr, function(&$val, $key){
+			$val = utf8_encode($val);
+		});
+		return $arr;
 	}
 	
 	/**
@@ -966,6 +976,11 @@ namespace G {
 	function mb_to_bytes($mb) {
 		return $mb * 1048576;
 	}
+	
+	// Converts bytes to MB
+	function bytes_to_mb($bytes) {
+		return round($bytes / 1048576);
+	}
 
 	// Returns bytes for SIZE + Suffix format
 	function get_bytes($size){
@@ -1127,13 +1142,13 @@ namespace G {
 		if(function_exists('curl_init')) {
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, $url);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER , false);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($ch, CURLOPT_AUTOREFERER, 1);
 			curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 			curl_setopt($ch, CURLOPT_HEADER, 0);
-			curl_setopt($ch, CURLOPT_FAILONERROR, false);
+			curl_setopt($ch, CURLOPT_FAILONERROR, 0);
 			curl_setopt($ch, CURLOPT_ENCODING, 'gzip'); // this needs zlib output compression enabled (php)
 			
 			if($file) {
@@ -1183,6 +1198,22 @@ namespace G {
 		}
 		
 	}
+	
+	function getUrlHeaders($url) {
+		$ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+		curl_setopt($ch, CURLOPT_NOBODY, 1);
+		curl_setopt($ch, CURLOPT_AUTOREFERER, 1);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		$raw = curl_exec($ch);
+        $return = curl_getinfo($ch);
+		$return['raw'] = $raw;
+        curl_close($ch);
+		return $return;
+	}
 
 	// Returns float Execution time at this point of call
 	function get_execution_time() {
@@ -1214,6 +1245,11 @@ namespace G {
 	// This will tell if the string is an URL
 	function is_url($string) {
 		return filter_var($string, FILTER_VALIDATE_URL);	
+	}
+	
+	// Tells if the given url is https or not
+	function is_https($string) {
+		return strpos($string, 'https://') !== false;
 	}
 
 	// Tell if the string is an URL and if is valid
@@ -1281,7 +1317,26 @@ namespace G {
 	 * FILE RELATED
 	 * ---------------------------------------------------------------------
 	 */
-
+	
+	// Make a recursive FTP path
+	function ftp_mkdir_recusive($conn_id, $path){
+		$fullpath = ftp_pwd($conn_id);
+		foreach(explode('/', $path) as $part){
+			$fullpath .= $part . '/';
+			if(empty($part)){
+				continue;
+			}
+			if(!@ftp_chdir($conn_id, $fullpath)){
+				if(@ftp_mkdir($conn_id, $part)){
+					ftp_chdir($conn_id, $part);
+				} else {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
 	// Get mimetype of $file according to your php version
 	function get_mimetype($file) {
 		if(function_exists('finfo_open')) {
@@ -1299,18 +1354,18 @@ namespace G {
 	// For now this only works for images
 	function mime_to_extension($mime, $reverse=false) {
 		$mime_to_extension = array(
-			'image/bmp' => 'bmp',
-			'image/x-windows-bmp' => 'bmp',
-			'image/x-ms-bmp' => 'bmp',
-			'image/gif' => 'gif',
-			'image/jpeg' => 'jpg',
-			'image/pjpeg' => 'jpg',
-			'image/png' => 'png',
-			'image/x-png' => 'png',
-			'image/tiff' => 'tiff',
-			'image/x-tiff' => 'tiff',
-			'image/x-icon' => 'ico',
-			'image/x-rgb' => 'rgb'
+			'image/x-windows-bmp'	=> 'bmp',
+			'image/x-ms-bmp'		=> 'bmp',
+			'image/bmp'				=> 'bmp',
+			'image/gif'				=> 'gif',
+			'image/pjpeg'			=> 'jpg',
+			'image/jpeg'			=> 'jpg',
+			'image/x-png'			=> 'png',
+			'image/png'				=> 'png',
+			'image/x-tiff'			=> 'tiff',
+			'image/tiff'			=> 'tiff',
+			'image/x-icon'			=> 'ico',
+			'image/x-rgb'			=> 'rgb'
 		);
 		
 		// Used to get ext -> mime
@@ -1337,7 +1392,7 @@ namespace G {
 			'name'		=> basename($file, '.' . get_file_extension($file)), // image
 			'width'		=> intval($info[0]),
 			'height'	=> intval($info[1]),
-			'ratio'		=> intval($info[0]) / intval($info[1]),
+			'ratio'		=> $info[0] / $info[1],
 			'size'		=> intval($filesize),
 			'size_formatted' => format_bytes($filesize),
 			'mime'		=> $mime,
@@ -1445,7 +1500,7 @@ namespace G {
 				$name = $original_filename;
 			break;
 			case 'random':
-				$name = random_string(16); // 7.958661109946401e+24
+				$name = random_string(32);
 			break;
 			case 'mixed':
 				if(strlen($original_filename) >= $max_lenght) {

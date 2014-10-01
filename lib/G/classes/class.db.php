@@ -295,9 +295,18 @@ class DB {
 		
 		self::validateClause($clause, __METHOD__);
 		
+		if(is_array($table)) {
+			$join = $table['join'];
+			$table = $table['table'];
+		}
+		
 		$table = DB::getTable($table);
 		
 		$query = 'SELECT * FROM '.$table;
+		
+		if($join) {
+			$query .= ' ' . $join . ' ';
+		}
 		
 		if(is_array($values) and !empty($values)) {
 			$query .= ' WHERE ';

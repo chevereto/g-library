@@ -324,13 +324,18 @@ class Handler {
 		if(!is_null($template)) {
 			$this->template = $template;
 		}
-		if(file_exists($this->path_theme.'functions.php')) require_once($this->path_theme.'functions.php');
-		$template_file = $this->path_theme.$this->template.'.php';
-		if(file_exists($template_file)) {
-			require_once($template_file);
-		} else {
-			throw new HandlerException('Missing ' . absolute_to_relative($template_file) . ' template file', 400);
+		if(file_exists($this->path_theme . 'functions.php')) require_once($this->path_theme . 'functions.php');
+		$template_file = [
+			$this->path_theme . 'views/'. $this->template . '.php',
+			$this->path_theme. $this->template . '.php'
+		];
+		foreach($template_file as $file) {
+			if(file_exists($file)) {
+				require_once($file);
+				return;
+			}
 		}
+		throw new HandlerException('Missing ' . absolute_to_relative($template_file[0]) . ' template file', 400);
 	}
 	
 	/**
@@ -400,7 +405,7 @@ class Handler {
 	 * Get the template file used
 	 */
 	public static function getTemplateUsed() {
-		return $this->template;
+		return self::$template_used;
 	}
 
 }

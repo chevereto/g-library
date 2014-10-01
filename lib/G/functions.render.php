@@ -76,6 +76,8 @@ function get_input_auth_token($name='auth_token') {
 // Outputs the REST_API array to xml
 function xml_output($array=array()) {
 	error_reporting(0);
+	//@ini_set('display_errors', false);
+	if(!ob_start('ob_gzhandler')) ob_start();
 	header("Last-Modified: ".gmdate("D, d M Y H:i:s")."GMT");
 	header("Cache-Control: no-cache, must-revalidate");
 	header("Pragma: no-cache");
@@ -97,9 +99,9 @@ function xml_output($array=array()) {
 
 // Procedural function to output an array to json
 function json_output($data=array(), $callback="") {
-	//error_reporting(0);
+	error_reporting(0);
 	//@ini_set('display_errors', false);
-	
+	if(!ob_start('ob_gzhandler')) ob_start();
 	header('Last-Modified: '.gmdate('D, d M Y H:i:s').'GMT');
 	header('Cache-Control: no-cache, must-revalidate');
 	header('Pragma: no-cache');
