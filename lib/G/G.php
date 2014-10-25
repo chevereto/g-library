@@ -18,7 +18,7 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.17');
+define('G_VERSION', '1.0.18');
 
 // Error reporting setup
 @ini_set('log_errors', true);
@@ -79,7 +79,7 @@ if(isset($settings['environment'])) {
 
 // Set the HTTP definitions
 define('G_HTTP_HOST', $_SERVER['HTTP_HOST']);
-define('G_HTTP_PROTOCOL', ((!empty($_SERVER['HTTPS']) and strtolower($_SERVER['HTTPS']) == 'on' ) or $_SERVER['X-FORWARDED-PROTO'] == 'https') ? 'https' : 'http');
+define('G_HTTP_PROTOCOL', ((!empty($_SERVER['HTTPS']) and strtolower($_SERVER['HTTPS']) == 'on' ) or $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') ? 'https' : 'http');
 
 // Fix some $_SERVER vars
 $_SERVER['SCRIPT_FILENAME'] = forward_slash($_SERVER['SCRIPT_FILENAME']);

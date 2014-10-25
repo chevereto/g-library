@@ -100,6 +100,8 @@ class DB {
 				self::$dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 			}
 			
+			self::$instance = $this;
+			
 		} catch(Exception $e) {
 			self::$dbh = NULL;
 			throw new DBException($e->getMessage(), 400);
@@ -367,15 +369,15 @@ class DB {
 		
 		// Set the value pairs
 		foreach($values as $k => $v) {
-			$query .= '`'.$k.'`=:value_'.$k.','; 
+			$query .= '`' . $k . '`=:value_' . $k . ','; 
 		}
 		$query = rtrim($query, ',') . ' WHERE ';
-		
+			
 		// Set the where pairs
 		foreach($wheres as $k => $v) {
 			$query .= '`'.$k.'`=:where_'.$k.' '.$clause.' '; 
 		}			
-		$query = rtrim($query, $clause.' ');	
+		$query = rtrim($query, $clause.' ');
 		
 		try {
 			$db = self::getInstance();
@@ -421,6 +423,51 @@ class DB {
 				$db->bind(':'.$k, $v);
 			}
 			return $db->exec() ? $db->lastInsertId() : false;
+		} catch(Exception $e) {
+			throw new DBException($e->getMessage(), 400);
+		}
+		
+	}
+	
+	/**
+	 * Update target numecic table row(s) with and increment (positive or negative)
+	 * Returns the number of affected rows or false
+	 */
+	public static function increment($table, $values, $wheres, $clause='AND') {
+		
+		if(!is_array($values)) {
+			throw new DBException('Expecting array values, '.gettype($values).' given in '. __METHOD__, 100);
+		}
+		
+		if(!is_array($wheres)) {
+			throw new DBException('Expecting array values, '.gettype($wheres).' given in '. __METHOD__, 100);
+		}
+		
+		$table = DB::getTable($table);
+		$query = 'UPDATE `'.$table.'` SET ';
+		
+		foreach($values as $k => $v) {
+			if(preg_match('/^([+-]{1})\s*([\d]+)$/', $v, $matches)) {
+				$query .= '`' . $k . '`=`' . $k . '`' . $matches[1] . $matches[2] . ',';
+			}
+		}
+		
+		$query = rtrim($query, ',') . ' WHERE ';
+		
+		// Set the where pairs
+		foreach($wheres as $k => $v) {
+			$query .= '`'.$k.'`=:where_'.$k.' '.$clause.' '; 
+		}			
+		$query = rtrim($query, $clause.' ');
+		
+
+		try {
+			$db = self::getInstance();
+			$db->query($query);
+			foreach($wheres as $k => $v) {
+				$db->bind(':where_'.$k, $v);
+			}
+			return $db->exec() ? $db->rowCount() : false;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}

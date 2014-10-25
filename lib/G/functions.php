@@ -949,57 +949,44 @@ namespace G {
 
 	// Converts bytes to whatever
 	function format_bytes($bytes, $round=1) {
-		$kilobyte = 1024;
-		$megabyte = $kilobyte * 1024;
-		$gigabyte = $megabyte * 1024;
-		$terabyte = $gigabyte * 1024;
-		
-		$bytes = str_replace(',','', $bytes);
-		
-		switch($bytes) {
-			case $bytes < $kilobyte:
-				return $bytes . ' B';
-			break;
-			case $bytes < $megabyte:
-				 return round($bytes / $kilobyte, $round) . ' KB';
-			break;
-			case $bytes < $gigabyte:
-				return round($bytes / $megabyte, $round) . ' MB';
-			break;
-			case $bytes < $terabyte:
-				return round($bytes / $gigabyte, $round) . ' GB';
-			break;
+		if(!is_numeric($bytes)) return false;
+		if ($bytes < 1000) return "$bytes B";
+		$units = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+		foreach($units as $k => $v) {
+			$multiplier = pow(1000, $k + 1);
+			$threshold = $multiplier * 1000;
+			if($bytes < $threshold) {
+				$size = round($bytes / $multiplier, $round);
+				return "$size $v";
+			}
 		}
 	}
-
-	// Converts MB to bytes
-	function mb_to_bytes($mb) {
-		return $mb * 1048576;
+	
+	// Returns bytes for SIZE + Suffix format
+	function get_bytes($size, $cut=-2){
+		$units = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+		$suffix = strtoupper(substr($size, $cut));
+		if(strlen($suffix) == 1) {
+			$ini_to_suffix = [
+				'M' => 'MB'
+			];
+			$suffix = $ini_to_suffix[$suffix];
+		}
+		if(!in_array($suffix, $units)) {
+			return $size;
+		}
+		$pow_factor = array_search($suffix, $units) + 1;
+		return $size * pow(1000, $pow_factor);
 	}
 	
 	// Converts bytes to MB
 	function bytes_to_mb($bytes) {
-		return round($bytes / 1048576);
+		return round($bytes / pow(10, 6));
 	}
-
-	// Returns bytes for SIZE + Suffix format
-	function get_bytes($size){
-		switch(strtolower(substr($size, -2))) {
-			case 'kb': return (float)$size * 1024;
-			case 'mb': return (float)$size * 1048576;
-			case 'gb': return (float)$size * 1073741824;
-			default: return $size;
-		}
-	}
-
+	
 	// Returns bytes (used for the ini_get functions)
 	function get_ini_bytes($size) {
-		switch(strtolower(substr($size, -1))) {
-			case 'k': return (int)$size * 1024;
-			case 'm': return (int)$size * 1048576;
-			case 'g': return (int)$size * 1073741824;
-			default: return $size;
-		}
+		return get_bytes($size, -1);
 	}
 
 
@@ -1317,25 +1304,6 @@ namespace G {
 	 * FILE RELATED
 	 * ---------------------------------------------------------------------
 	 */
-	
-	// Make a recursive FTP path
-	function ftp_mkdir_recusive($conn_id, $path){
-		$fullpath = ftp_pwd($conn_id);
-		foreach(explode('/', $path) as $part){
-			$fullpath .= $part . '/';
-			if(empty($part)){
-				continue;
-			}
-			if(!@ftp_chdir($conn_id, $fullpath)){
-				if(@ftp_mkdir($conn_id, $part)){
-					ftp_chdir($conn_id, $part);
-				} else {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
 	
 	// Get mimetype of $file according to your php version
 	function get_mimetype($file) {

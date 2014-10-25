@@ -356,10 +356,19 @@ class Handler {
 	}
 	
 	/**
-	 * Sets a Handler::$var - get_var() binding
+	 * Sets a Handler::$var > get_var() binding
 	 */
 	public static function setVar($var, $value) {
 		self::$vars[$var] = $value;
+	}
+	
+	/**
+	 * Sets a multiple Handler::$var > get_var() binding
+	 */
+	public static function setVars($array) {
+		foreach((array)$array as $var => $value) {
+			self::$vars[$var] = $value;
+		}
 	}
 	
 	/**
@@ -367,6 +376,15 @@ class Handler {
 	 */
 	public static function setCond($cond, $bool) {
 		self::$cond[$cond] = !$bool ? false : true;
+	}
+	
+	/**
+	 * Sets a multiple Handler::$cond -> is_cond() binding
+	 */
+	public static function setConds($array) {
+		foreach((array)$array as $cond => $bool) {
+			self::$cond[$cond] = !$bool ? false : true;
+		}
 	}
 	
 	/**
