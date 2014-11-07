@@ -950,11 +950,11 @@ namespace G {
 	// Converts bytes to whatever
 	function format_bytes($bytes, $round=1) {
 		if(!is_numeric($bytes)) return false;
-		if ($bytes < 1000) return "$bytes B";
+		if ($bytes < 1024) return "$bytes B";
 		$units = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 		foreach($units as $k => $v) {
-			$multiplier = pow(1000, $k + 1);
-			$threshold = $multiplier * 1000;
+			$multiplier = pow(1024, $k + 1);
+			$threshold = $multiplier * 1024;
 			if($bytes < $threshold) {
 				$size = round($bytes / $multiplier, $round);
 				return "$size $v";
