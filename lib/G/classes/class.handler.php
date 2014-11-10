@@ -436,7 +436,7 @@ class Handler {
 	 */
 	public static function getMappedRoute() {
 		// $sub_routes == array from G\Handler::$route join array as string with / to match current $route
-		return (is_array(G\Handler::$route)) ? implode("/", G\Handler::$route) : G\Handler::$route;	
+		return (is_array(self::$route)) ? implode("/", self::$route) : self::$route;	
 	}
 
 }
