@@ -33,12 +33,6 @@ namespace G {
 		return Handler::$base_request;
 	}
 	
-	/*
-	function get_route_request_name() { // deprecated
-		return get_route_name();
-	}
-	*/
-	
 	function getTemplateUsed() {
 		return Handler::$template_used;
 	}
@@ -514,7 +508,7 @@ namespace G {
 
 					$found_ip = preg_replace($private_ip, $client_ip, $ip_list[1]);
 
-					if($client_ip != $found_ip){
+					if($client_ip != $found_ip and !isset($_SERVER['HTTP_CF_CONNECTING_IP'])){
 						$client_ip = $found_ip;
 						break;
 					}
@@ -524,7 +518,7 @@ namespace G {
 			$client_ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : (!empty($_ENV['REMOTE_ADDR']) ? $_ENV['REMOTE_ADDR'] : $client_ip);
 	   }
 	 
-	   return $client_ip;
+		return $client_ip;
 	 
 	}
 	
@@ -789,6 +783,21 @@ namespace G {
 		$clean = ($only_alphanumerics ? preg_replace('/[^a-zA-Z0-9]/', '', $clean) : $clean);
 		$clean = ($truncate ? substr($clean, 0, $truncate) : $clean);
 		return ($force_lowercase) ? (function_exists('mb_strtolower')) ? mb_strtolower($clean, 'UTF-8') : strtolower($clean) : $clean;
+	}
+	
+	// Original PHP code by Chirp Internet: www.chirp.com.au
+	// Please acknowledge use of this code by including this header.
+	function truncate($string, $limit, $break=".", $pad="...") {
+	  // return with no change if string is shorter than $limit
+	  if(strlen($string) <= $limit) return $string;
+	  // is $break present between $limit and the end of the string?
+	  if(false !== ($breakpoint = strpos($string, $break, $limit))) {
+	    if($breakpoint < strlen($string) - 1) {
+	      $string = substr($string, 0, $breakpoint) . $pad;
+	    }
+	  }
+
+	  return $string;
 	}
 	
 	// Thanks to http://www.evaisse.net/2008/php-translit-remove-accent-unaccent-21001
