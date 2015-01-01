@@ -29,6 +29,10 @@ namespace G {
 		return file_exists(G_APP_PATH_ROUTES . 'route.'.$string.'.php') or file_exists(G_APP_PATH_ROUTES_OVERRIDES . 'route.'.$string.'.php');
 	}
 	
+	function isPreventedRoute() {
+		return Handler::$prevented_route == true;
+	}
+	
 	function get_route_name() {
 		return Handler::$base_request;
 	}

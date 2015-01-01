@@ -19,7 +19,7 @@ use Exception;
  
 class Handler {
 
-	public static $route, $route_request, $base_request, $doctitle, $vars, $cond, $routes, $template_used;
+	public static $route, $route_request, $base_request, $doctitle, $vars, $cond, $routes, $template_used, $prevented_route;
 	
 	/**
 	 * Build a valid request
@@ -200,9 +200,9 @@ class Handler {
 			} else {
 				self::$vars = $magic;
 			}
-
+			
 			// Only call a valid route fn
-			if(is_callable($routes[self::$base_request])) {	
+			if(!self::$prevented_route and is_callable($routes[self::$base_request])) {
 				$routes[self::$base_request]($this);
 			}
 			
@@ -256,6 +256,16 @@ class Handler {
 	public function issue404() {
 		set_status_header(404);
 		$this->template = 404;
+	}
+	
+	/**
+	 * Prevent the rest of the execution loading the target view
+	 */
+	public function preventRoute($tpl=NULL) {
+		if($tpl) {
+			$this->template = $tpl;
+		}
+		self::$prevented_route = true;
 	}
 	
 	/**
