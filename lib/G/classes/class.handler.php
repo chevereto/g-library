@@ -435,6 +435,19 @@ class Handler {
 	public static function getTemplateUsed() {
 		return self::$template_used;
 	}
+	
+	/**
+	 * G -> get_route_name() is single 
+	 * Example (G\get_route_name() == 'page/tos') ? "yes" : "no"; <-- No G\get_route_name() = Index request i.e page
+	 * This extends theme developers for a current page mapped in the array
+	 * for a real path the $route is on.
+	 * Example (self::getMappedRoute() == 'page/tos') ? "yes" : "no"; <-- makes array string to match
+	 * @return array|string
+	 */
+	public static function getMappedRoute() {
+		// $sub_routes == array from G\Handler::$route join array as string with / to match current $route
+		return (is_array(self::$route)) ? implode("/", self::$route) : self::$route;	
+	}
 
 }
 
