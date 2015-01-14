@@ -126,9 +126,9 @@ class Handler {
 				$this->bindIsFn($k, $v);
 			}
 		}
-		
+				
 		$this->loadTemplate();
-		
+
 	}
 	
 	/**
@@ -435,6 +435,18 @@ class Handler {
 	public static function getTemplateUsed() {
 		return self::$template_used;
 	}
+	
+	/**
+	 * Get the current route
+	 * @args $full (bool true) outputs the full route 'like/this' or 'this'
+	 */
+	public static function getRoute($full=true) {
+		if(is_array(self::$route)) {
+			return $full ? implode('/', self::$route) : self::$route[0];
+		} else {
+			return self::$route;
+		}		
+ 	}
 
 }
 

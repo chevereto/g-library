@@ -382,6 +382,7 @@ class DB {
 		try {
 			$db = self::getInstance();
 			$db->query($query);
+			
 			// Bind the values
 			foreach($values as $k => $v) {
 				$db->bind(':value_'.$k, $v);
@@ -389,6 +390,7 @@ class DB {
 			foreach($wheres as $k => $v) {
 				$db->bind(':where_'.$k, $v);
 			}
+			
 			return $db->exec() ? $db->rowCount() : false;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);

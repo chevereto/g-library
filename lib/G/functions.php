@@ -1137,7 +1137,7 @@ namespace G {
 			return false;
 		}
 		
-		$url = preg_replace('/^https/', 'http', $url, 1);
+		//$url = preg_replace('/^https/', 'http', $url, 1);
 		
 		if(function_exists('curl_init')) {
 			$ch = curl_init();
@@ -1264,11 +1264,11 @@ namespace G {
 		if(function_exists('curl_init')) {
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, $url);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER , false);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_NOBODY, true);
-			curl_setopt($ch, CURLOPT_FAILONERROR, false);
-			curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER , 0);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($ch, CURLOPT_NOBODY, 1);
+			curl_setopt($ch, CURLOPT_FAILONERROR, 0);
+			curl_setopt($ch, CURLOPT_AUTOREFERER, 1);
 			curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 			$result = @curl_exec($ch);
 			curl_close($ch);
