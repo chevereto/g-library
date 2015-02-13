@@ -163,6 +163,14 @@ namespace G {
 		return $result === 0;
 	}
 	
+	function str_replace_first($search, $replace, $subject) {
+		$pos = strpos($subject, $search);
+		if ($pos !== false) {
+			$subject = substr_replace($subject, $replace, $pos, strlen($search));
+		}
+		return $subject;
+	}
+	
 	/**
 	 * DATA HANDLING
 	 * ---------------------------------------------------------------------
