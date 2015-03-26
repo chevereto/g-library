@@ -21,24 +21,35 @@ namespace G {
 	 * ---------------------------------------------------------------------
 	 */
 	
-	function is_route($string){
-		return Handler::$base_request == $string;
+	// Returns true if the $route is current route
+	function is_route($route){
+		return Handler::$base_request == $route;
 	}
 	
-	function isRouteAvailable($string) {
-		return file_exists(G_APP_PATH_ROUTES . 'route.'.$string.'.php') or file_exists(G_APP_PATH_ROUTES_OVERRIDES . 'route.'.$string.'.php');
+	// Returns true if the $route is ruteable
+	function is_route_available($route) {
+		$route_file = 'route.'.$route.'.php';
+		return file_exists(G_APP_PATH_ROUTES . $route_file) or file_exists(G_APP_PATH_ROUTES_OVERRIDES . $route_file);
 	}
 	
-	function isPreventedRoute() {
+	// Returns true if the route is prevented
+	function is_prevented_route() {
 		return Handler::$prevented_route == true;
 	}
 	
-	function get_route_name() {
-		return Handler::$base_request;
+	// Get the route path
+	function get_route_path($full=false) { // Full=true returns route/sub-routes, Full=false returns route alone
+		return Handler::getRoutePath($full);
 	}
 	
-	function getTemplateUsed() {
-		return Handler::$template_used;
+	// Get route name from route.name.php
+	function get_route_name() {
+		return Handler::getRouteName();
+	}
+	
+	// Get the route template basename file used. Useful when you do route mapping.
+	function get_template_used() { 
+		return Handler::getTemplateUsed();
 	}
 	
 	/**
@@ -66,6 +77,10 @@ namespace G {
 	function get_global($var) {
 		global $$var;
 		return $$var;
+	}
+	
+	function is_apache() {
+		return (isset($_SERVER['SERVER_SOFTWARE']) and preg_match('/Apache/i', $_SERVER['SERVER_SOFTWARE']));
 	}
 	
 	// Fixed from the original (not working) at: http://stackoverflow.com/a/7859707
@@ -171,6 +186,29 @@ namespace G {
 		return $subject;
 	}
 	
+	function str_replace_last($search, $replace, $subject) {
+		$pos = strrpos($subject, $search);
+		if($pos !== false) {
+			$subject = substr_replace($subject, $replace, $pos, strlen($search));
+		}
+		return $subject;
+	}
+	
+	// Taken from http://stackoverflow.com/a/834355
+	function starts_with($needle, $haystack) {
+		$length = strlen($needle);
+		return (substr($haystack, 0, $length) === $needle);
+	}
+	
+	// Taken from http://stackoverflow.com/a/834355
+	function ends_with($needle, $haystack) {
+		$length = strlen($needle);
+		if($length == 0) {
+			return true;
+		}
+		return (substr($haystack, -$length) === $needle);
+	}
+	
 	/**
 	 * DATA HANDLING
 	 * ---------------------------------------------------------------------
@@ -248,6 +286,29 @@ namespace G {
 		}
 	}
 	
+	// http://bavotasan.com/2011/convert-hex-color-to-rgb-using-php/
+	function hex_to_rgb($hex) {
+		$hex = str_replace('#', '', $hex);
+		if(strlen($hex) == 3) {
+		  $r = hexdec(substr($hex,0,1).substr($hex,0,1));
+		  $g = hexdec(substr($hex,1,1).substr($hex,1,1));
+		  $b = hexdec(substr($hex,2,1).substr($hex,2,1));
+		} else {
+		  $r = hexdec(substr($hex,0,2));
+		  $g = hexdec(substr($hex,2,2));
+		  $b = hexdec(substr($hex,4,2));
+		}
+		$rgb = array($r, $g, $b);
+		return $rgb; // returns an array with the rgb values
+	}
+	function rgb_to_hex($rgb) {
+		$hex = '#';
+		$hex .= str_pad(dechex($rgb[0]), 2, '0', STR_PAD_LEFT);
+		$hex .= str_pad(dechex($rgb[1]), 2, '0', STR_PAD_LEFT);
+		$hex .= str_pad(dechex($rgb[2]), 2, '0', STR_PAD_LEFT);
+		return $hex; // returns the hex value including the number sign (#)
+	}
+	
 	/**
 	 * Convert HTML code to BBCode
 	 * http://kuikie.com/snippets/snippet.php/90-17/php-function-to-convert-bbcode-to-html
@@ -316,6 +377,113 @@ namespace G {
 		$ntext = strip_tags($ntext);
 		$ntext = trim(html_entity_decode($ntext, ENT_QUOTES, 'UTF-8'));
 		return $ntext;
+	}
+	
+	// Linkify functions borrowed from https://github.com/misd-service-development/php-linkify
+	
+	function linkify($text, array $options = array()) {
+         $attr = '';
+        if (true === array_key_exists('attr', $options)) {
+            foreach ($options['attr'] as $key => $value) {
+                if (true === is_array($value)) {
+                    $value = array_pop($value);
+                }
+                $attr .= sprintf(' %s="%s"', $key, $value);
+            }
+        }
+        $options['attr'] = $attr;
+        $ignoreTags = array('head', 'link', 'a', 'script', 'style', 'code', 'pre', 'select', 'textarea', 'button');
+        $chunks = preg_split('/(<.+?>)/is', $text, 0, PREG_SPLIT_DELIM_CAPTURE);
+        $openTag = null;
+        for ($i = 0; $i < count($chunks); $i++) {
+            if ($i % 2 === 0) { // even numbers are text
+                // Only process this chunk if there are no unclosed $ignoreTags
+                if (null === $openTag) {
+                    $chunks[$i] = linkify_urls($chunks[$i], $options);
+                    $chunks[$i] = linkify_emails($chunks[$i], $options);
+                }
+            } else { // odd numbers are tags
+                // Only process this tag if there are no unclosed $ignoreTags
+                if (null === $openTag) {
+                    // Check whether this tag is contained in $ignoreTags and is not self-closing
+                    if (preg_match("`<(" . implode('|', $ignoreTags) . ").*(?<!/)>$`is", $chunks[$i], $matches)) {
+                        $openTag = $matches[1];
+                    }
+                } else {
+                    // Otherwise, check whether this is the closing tag for $openTag.
+                    if (preg_match('`</\s*' . $openTag . '>`i', $chunks[$i], $matches)) {
+                        $openTag = null;
+                    }
+                }
+            }
+        }
+        $text = implode($chunks);
+        return $text;
+    }
+	
+	function linkify_emails($text, $options = array('attr' => '')) {
+        $pattern = '~(?xi)
+                \b
+                (?<!=)           # Not part of a query string
+                [A-Z0-9._\'%+-]+ # Username
+                @                # At
+                [A-Z0-9.-]+      # Domain
+                \.               # Dot
+                [A-Z]{2,4}       # Something
+        ~';
+        $callback = function ($match) use ($options) {
+            if (isset($options['callback'])) {
+                $cb = $options['callback']($match[0], $match[0], true);
+                if (!is_null($cb)) {
+                    return $cb;
+                }
+            }
+            return '<a href="mailto:' . $match[0] . '"' . $options['attr'] . '>' . $match[0] . '</a>';
+        };
+        return preg_replace_callback($pattern, $callback, $text);
+    }
+	
+	function linkify_urls($text, $options = array('attr' => '')) {
+		$pattern = '~(?xi)
+              (?:
+                ((ht|f)tps?://)                    # scheme://
+                |                                  #   or
+                www\d{0,3}\.                       # "www.", "www1.", "www2." ... "www999."
+                |                                  #   or
+                www\-                              # "www-"
+                |                                  #   or
+                [a-z0-9.\-]+\.[a-z]{2,4}(?=/)      # looks like domain name followed by a slash
+              )
+              (?:                                  # Zero or more:
+                [^\s()<>]+                         # Run of non-space, non-()<>
+                |                                  #   or
+                \(([^\s()<>]+|(\([^\s()<>]+\)))*\) # balanced parens, up to 2 levels
+              )*
+              (?:                                  # End with:
+                \(([^\s()<>]+|(\([^\s()<>]+\)))*\) # balanced parens, up to 2 levels
+                |                                  #   or
+                [^\s`!\-()\[\]{};:\'".,<>?«»“”‘’]  # not a space or one of these punct chars
+              )
+        ~';
+		$callback = function ($match) use ($options) {
+			$caption = $match[0];
+			$pattern = "~^(ht|f)tps?://~";
+			if (0 === preg_match($pattern, $match[0])) {
+				$match[0] = 'http://' . $match[0];
+			}
+			if (isset($options['callback'])) {
+				$cb = $options['callback']($match[0], $caption, false);
+				if (!is_null($cb)) {
+					return $cb;
+				}
+			}
+			return '<a href="' . $match[0] . '"' . $options['attr'] . '>' . $caption . '</a>';
+		};
+		return preg_replace_callback($pattern, $callback, $text);
+	}
+	
+	function linkify_safe($text, $options = []) {
+		return linkify(htmlspecialchars($text), ['attr' => array_merge(['rel' => 'nofollow', 'target' => '_blank'], $options)]);;
 	}
 	
 	/**
@@ -468,7 +636,7 @@ namespace G {
 		return $string ? implode(', ', $string) . ' ago' : 'just now';
 	}
 	
-	// Returns the difference between two dates in seconds
+	// Returns the difference between two dates in the given format (default seconds)
 	function datetime_diff($older, $newer=NULL, $format='s') {
 		
 		if(!in_array($format, ['s', 'm', 'h', 'd'])) {
@@ -758,7 +926,11 @@ namespace G {
 		}
 		return $valid;
 	}
-
+	
+	function is_valid_hex_color($string, $prefix=true) {
+		return preg_match('/#' . ($prefix ? '?' : NULL) . '([\da-fA-F]{2})([\da-fA-F]{2})([\da-fA-F]{2})/', $string);
+	}
+	
 	/**
 	 * SANITIZATION
 	 * ---------------------------------------------------------------------
@@ -1252,7 +1424,31 @@ namespace G {
 
 	// This will tell if the string is an URL
 	function is_url($string) {
-		return filter_var($string, FILTER_VALIDATE_URL);	
+		// Only for strings
+		if(!is_string($string)) {
+			return false;
+		}
+		// Internal PHP system
+		if(filter_var($string, FILTER_VALIDATE_URL)) { // Note: This doesn't validate any non-alphanumeric URL
+			return true;
+		}
+		// Test if it has foreign chars
+		if(strlen($string) !== strlen(utf8_encode($string))) {
+			$parsed_url = parse_url($string);
+			if(count($parsed_url) < 2) { // At least scheme and host
+				return false;
+			}
+			$schemes = ['http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'gopher', 'nntp', 'feed', 'telnet', 'mms', 'rtsp', 'svn', 'tel', 'fax', 'xmpp'];
+			if(!in_array(strtolower($parsed_url['scheme']), $schemes)) { // Must be a valid scheme
+				return false;
+			}
+			if(!array_key_exists('host', $parsed_url)) { // Host must be there
+				return false;
+			}
+			// At this point this thing looks like an URL
+			return true;
+		}
+		return false;
 	}
 	
 	// Tells if the given url is https or not

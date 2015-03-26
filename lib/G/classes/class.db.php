@@ -14,6 +14,11 @@
   
   --------------------------------------------------------------------- */
 
+/**
+ * class.db.php
+ * This class does all the DB handling of the G\ app
+ */
+
 namespace G;
 use PDO, PDOException, Exception;
 
@@ -195,6 +200,19 @@ class DB {
 	}
 	
 	/**
+	 * Query and exec
+	 */
+	public static function queryExec($query) {
+		try {
+			$db = self::getInstance();
+			$db->query($query);
+			return $db->exec();
+		} catch(Exception $e) {
+			throw new DBException($e->getMessage(), 400);
+		}
+	}
+	
+	/**
 	 * Query and fetch single record
 	 */
 	public static function queryFetchSingle($query, $fetch_style=NULL) {
@@ -221,7 +239,7 @@ class DB {
 	 */
 	public static function queryFetch($query, $limit=1, $fetch_style=NULL) {
 		try {
-			$db =self::getInstance();
+			$db = self::getInstance();
 			$db->query($query);
 			return $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
 		} catch(Exception $e) {
@@ -313,7 +331,11 @@ class DB {
 		if(is_array($values) and !empty($values)) {
 			$query .= ' WHERE ';
 			foreach($values as $k => $v) {
-				$query .= '`'.$k.'`=:'.$k.' '.$clause.' ';
+				if(is_null($v)) {
+					$query .= '`'.$k.'` IS :'.$k.' '.$clause.' ';
+				} else {
+					$query .= '`'.$k.'`=:'.$k.' '.$clause.' ';
+				}
 			}
 		}
 		

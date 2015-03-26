@@ -14,12 +14,17 @@
   
   --------------------------------------------------------------------- */
 
+/**
+ * class.handler.php
+ * This class does all the route handling process of the G\ app
+ */
+  
 namespace G;
 use Exception;
  
 class Handler {
 
-	public static $route, $route_request, $base_request, $doctitle, $vars, $cond, $routes, $template_used, $prevented_route;
+	public static $route, $route_request, $route_name, $base_request, $doctitle, $vars, $cond, $routes, $template_used, $prevented_route;
 	
 	/**
 	 * Build a valid request
@@ -70,6 +75,11 @@ class Handler {
 		$this->request_array = array_values(array_filter($this->request_array, 'strlen'));	
 		self::$base_request = $this->request_array[0];
 		
+		// Reserved route (index)
+		if(self::$base_request == 'index') {
+			redirect('/', 301);
+		}
+		
 		// Fix the canonical request /something?q= to /something/?q=
 		if(self::$base_request !== '' && !empty($_SERVER['QUERY_STRING'])) {
 			$path_request = add_trailing_slashes(rtrim(str_replace($_SERVER['QUERY_STRING'], '', $this->canonical_request), '?'));
@@ -88,8 +98,8 @@ class Handler {
 			$this->baseRedirection($this->canonical_request);
 		}
 		
-		self::$route = $this->template !== 404 ? $this->request_array[0] == '/' ? 'index' : $this->request_array : 404;
 		self::$route_request = $this->request_array;
+		self::$route = $this->template !== 404 ? $this->request_array[0] == '/' ? 'index' : $this->request_array : 404;
 		
 		if(in_array(self::$base_request, ['', 'index.php', '/'])) {
 			self::$base_request = 'index';
@@ -212,11 +222,9 @@ class Handler {
 		}
 		
 		if($this->template == 404) {
-			self::$cond['404'] = true;
 			self::$route = 404;
-		} else {
-			self::$cond['404'] = false;
 		}
+		self::setCond('404', $this->template == 404);
 		
 		if(self::$vars['pre_doctitle']) {
 			$stock_doctitle = self::$vars['doctitle'];
@@ -255,6 +263,9 @@ class Handler {
 	 */
 	public function issue404() {
 		set_status_header(404);
+		if($this->getCond('mapped_route')) {
+			self::$base_request = self::$route_request[0];
+		}
 		$this->template = 404;
 	}
 	
@@ -287,7 +298,8 @@ class Handler {
 		if(file_exists($route_file)) {
 			require($route_file);
 			// Append this new route fn to the Handler::$routes stack
-			self::$routes[$route_name] = $route; 
+			self::$routes[$route_name] = $route;
+			self::$route_name = $route_name;
 			return $route;
 		} else {
 			return false;
@@ -430,22 +442,29 @@ class Handler {
 	}
 	
 	/**
-	 * Get the template file used
+	 * Get the template file basename used
 	 */
 	public static function getTemplateUsed() {
 		return self::$template_used;
 	}
 	
 	/**
-	 * Get the current route
+	 * Get the current route path
 	 * @args $full (bool true) outputs the full route 'like/this' or 'this'
 	 */
-	public static function getRoute($full=true) {
+	public static function getRoutePath($full=true) {
 		if(is_array(self::$route)) {
 			return $full ? implode('/', self::$route) : self::$route[0];
 		} else {
 			return self::$route;
 		}		
+ 	}
+	
+	/**
+	 * Get the current route name from route.name.php
+	 */
+	public static function getRouteName() {
+		return self::$route_name;		
  	}
 
 }
