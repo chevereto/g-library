@@ -18,10 +18,10 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.23');
+define('G_VERSION', '1.0.24');
 
 // Error reporting setup
-@ini_set('log_errors', true);
+@ini_set('log_errors', TRUE);
 error_reporting(E_ALL ^ E_NOTICE);
 
 // Set the encoding to UTF-8
@@ -91,9 +91,9 @@ if(file_exists(G_APP_PATH . 'app.php')) {
 }
 
 // Set the DB constants
-foreach(['db_host', 'db_port', 'db_name', 'db_user', 'db_pass', 'db_driver'] as $k) {
-	if(isset($settings[$k])) {
-		define('G_APP_'.strtoupper($k), $settings[$k]);
+foreach(['host', 'port', 'name', 'user', 'pass', 'driver'] as $k) {
+	if($settings['db_' . $k]) {
+		define('G_APP_DB_'.strtoupper($k), $settings['db_' . $k]);
 	}
 }
 

@@ -1,4 +1,5 @@
 <?php
+
 /* --------------------------------------------------------------------
 
   G\ library
@@ -13,7 +14,7 @@
   
   --------------------------------------------------------------------- */
 
-/*
+/**
  * This class uses code that belongs to JShrink
  * @JShrink author Robert Hafner <tedivm@tedivm.com>
  * @JShrink license http://www.opensource.org/licenses/bsd-license.php BSD License
@@ -21,9 +22,8 @@
   
 /**
  * class.minify.php
- * This class minify a js/css file:
- *  - Read a file and saves the minify version to a given target (default target is souce.min.ext)
- * 	- Works with JS and CSS files
+ * This class minify a js/css file.
+ * It reads a file and saves the minify version to a given target (default target is souce.min.ext)
  */
 
 namespace G;
@@ -59,12 +59,12 @@ class Minify {
 	 * addFileSource
 	 * Sets the filepath to be minified and gets the contents
 	 * 
-	 * @param	string
+	 * @param	$source filepath
 	 */
 	public function addFileSource($source) {
 		$this->source = $source;
 		if(!@is_readable($this->source)) {
-			throw new MinifyException('Source file "'. $this->source .'" can\'t be loaded. Make sure that the file exists on the given path.');
+			throw new MinifyException('Source file "'. $this->source .'" can\'t be loaded. Make sure that the file exists on the given path.', 101);
 		}
 		$type = preg_replace('/^.*\.(css|js)$/i', '$1', $source);
 		$this->setType($type);
@@ -76,11 +76,11 @@ class Minify {
 	 * addInlineSource
 	 * Sets the contents from inline
 	 * 
-	 * @param	string
+	 * @param	string containing raw code
 	 */
 	public function addInlineSource($source) {
 		if(strlen($source) == 0) {
-			throw new MinifyException('Source code is empty.', 100);
+			throw new MinifyException('Source code is empty.', 102);
 		}
 		$this->source = $source;
 		$this->source_method = 'inline';
@@ -98,28 +98,28 @@ class Minify {
 	/**
 	 * setType
 	 * Set type of the rource to minify
+	 *
+	 * @param	js|css
 	 */
 	public function setType($type) {
 		if(!in_array($type, ['js', 'css'])) {
-			throw new MinifyException('Invalid type. This only works with JS and CSS.', 100);
+			throw new MinifyException('Invalid type. This only works with JS and CSS.', 103);
 		}
 		$this->type = $type;
 	}
 	
 	/**
-	 * setTarget
-	 * Sets where you want to save the minified file
-	 * 
-	 * @param	string
+	 * setFileTarget
+	 * Sets the file target where you want to save the minified file
 	 */
-	public function setTarget($target=NULL) {
+	public function setFileTarget() {
 		$this->options['output'] = 'file';
 		$this->target = ($target == NULL ? $this->getDefaultTarget() : $target);
 	}
 	
 	/**
 	 * exec
-	 * Does the minification process
+	 * Execute the minification process
 	 */
 	public function exec() {
 		if(!isset($this->source)) {
@@ -130,9 +130,13 @@ class Minify {
 		}
 		// Process default target
 		if(!$this->target and $this->options['output'] == 'file') {
-			$this->setTarget(); // Target sets only for file output
+			$this->setFileTarget(); // Target sets only for file output
 		}
 		if($this->target) {
+			// Detect write support
+			if(!@is_writable(dirname($this->target))) {
+				throw new MinifyException("Can't write into target dir.", 200);
+			}
 			// Target already exists?
 			if(@is_readable($this->target) and !$this->forced) {
 				$source_mtime = filemtime($this->source);
@@ -164,7 +168,7 @@ class Minify {
 	private function getSourceData() {
 		$data = @file_get_contents($this->source);
 		if($data === false) {
-			throw new MinifyException('Can\'t read the contents of the source file.');
+			throw new MinifyException('Can\'t read the contents of the source file.', 100);
 		} else {
 			return $data;
 		}
@@ -222,15 +226,21 @@ class Minify {
 	 */
 	private function saveToFile() {
 		if(!isset($this->minified_data)) {
-			throw new MinifyException('There is no data to write to "'.$this->target.'"');
+			throw new MinifyException('There is no data to write to "'.$this->target.'"', 300);
 		}
 		if(($handler = @fopen($this->target, 'w')) === false) {
-			throw new MinifyException('Can\'t open "' . $this->target . '" for writing.');
+			throw new MinifyException('Can\'t open "' . $this->target . '" for writing.', 301);
 		}
-		if(@fwrite($handler, $this->minified_data) === false) {
-			throw new MinifyException('The file "' . $path . '" could not be written to. Check if PHP has enough permissions.');
+		if(!fwrite($handler, $this->minified_data)) {
+			throw new MinifyException('The file "' . $path . '" could not be written to. Check if PHP has enough permissions.', 303);
 		}
-		@fclose($handler);
+		if($this->source_method == 'file') {
+			$minify_mtime = filemtime($this->target);
+			if($minify_mtime) {
+				@touch($this->source, $minify_mtime - 1); // Make sure to touch the source file to avoid filemtime issues
+			}
+		}
+		fclose($handler);
 	}
 	
 	/**

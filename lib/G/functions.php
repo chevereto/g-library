@@ -21,12 +21,12 @@ namespace G {
 	 * ---------------------------------------------------------------------
 	 */
 	
-	// Returns true if the $route is current route
+	// Returns true if the $route is current /route or mapped-route -> /route
 	function is_route($route){
 		return Handler::$base_request == $route;
 	}
 	
-	// Returns true if the $route is ruteable
+	// Returns true if the $route is has route file
 	function is_route_available($route) {
 		$route_file = 'route.'.$route.'.php';
 		return file_exists(G_APP_PATH_ROUTES . $route_file) or file_exists(G_APP_PATH_ROUTES_OVERRIDES . $route_file);
@@ -38,7 +38,8 @@ namespace G {
 	}
 	
 	// Get the route path
-	function get_route_path($full=false) { // Full=true returns route/sub-routes, Full=false returns route alone
+	// $full=true returns route/and/sub/routes, $full=false returns just the /route base
+	function get_route_path($full=false) { 
 		return Handler::getRoutePath($full);
 	}
 	
@@ -261,24 +262,48 @@ namespace G {
 	}
 	
 	/**
-	 * Output easy-to-read numbers
-	 * by james at bandit.co.nz
+	 * Recursive remove empty properties
 	 */
-    function nice_number($n) {
-        // first strip any formatting;
-        $n = (0+str_replace(',','',$n));
-        
-        // is this a number?
-        if(!is_numeric($n)) return false;
-        
-        // now filter it;
-        if($n>1000000000000) return round(($n/1000000000000),1).' T';
-        else if($n>1000000000) return round(($n/1000000000),1).' B';
-        else if($n>1000000) return round(($n/1000000),1).' M';
-        else if($n>1000) return round(($n/1000),1).' K';
-        
-        return number_format($n);
-    }
+	function array_remove_empty($haystack) {
+		foreach($haystack as $key => $value) {
+			if(is_array($value)) {
+				$haystack[$key] = array_remove_empty($haystack[$key]);
+			}
+			if(empty($haystack[$key])) {
+				unset($haystack[$key]);
+			}
+		}
+		return $haystack;
+	}
+	
+	/**
+	 * Abbreviate a number with suffix output
+	 */
+	function abbreviate_number($number) {
+
+		// strip any formatting
+		$number = (0+str_replace(',', '', $number));
+		
+		// Not a number, keep it "as is"
+		if(!is_numeric($number) or $number == 0) return $number;
+
+		$abbreviations = [
+			24 => 'Y',
+			21 => 'Z',
+			18 => 'E',
+			15 => 'P',
+			12 => 'T',
+			9 => 'B',
+			6 => 'M',
+			3 => 'K',
+			0 => NULL
+		];
+		foreach($abbreviations as $exponent => $abbreviation) {
+			if($number >= pow(10, $exponent)) {
+				return round(floatval($number / pow(10, $exponent))) . $abbreviation;
+			}
+		}
+	}
 	
 	function nullify_string(&$string) {
 		if($string == '') {
@@ -491,20 +516,40 @@ namespace G {
 	 * ---------------------------------------------------------------------
 	 */
 	
-	// Converts an Exception to a formated PHP like error
-	function exception_to_error($e, $die=true) {
+	// Converts an Exception to a formatted PHP like error
+	function exception_to_error($e, $die=TRUE) {
 		
-		error_log($e);
+		$internal_code = 500;
+		$internal_error = '<b>'.G_APP_NAME.' error:</b> ' . get_set_status_header_desc($internal_code);
 		
+		set_status_header($internal_code);
+		
+		// Debug levels
+		// 0:NONE 1:ERROR_LOG 2:PRINT(NO ERROR_LOG) 3:PRINT+ERROR_LOG
+		
+		$debug_level = get_app_setting('debug_level');
+		
+		if(!in_array($debug_level, [0,1,2,3])) {
+			$debug_level = 1;
+		}
+		
+		if(in_array($debug_level, [1,3])) {
+			error_log($e);
+		}
+		
+		if(!in_array($debug_level, [2,3])) { // No print here
+			die($internal_error);
+		}
+
 		$message = [];
 		$message[] = '<b>Fatal error ['.$e->getCode().']:</b> ' . safe_html($e->getMessage());
 		$message[] = 'Triggered in ' . absolute_to_relative($e->getFile()) . ' at line ' . $e->getLine() . "\n";
 		$message[] = '<b>Stack trace:</b>';
 		
-		$rtn = "";
+		$rtn = '';
 		$count = 0;
 		foreach ($e->getTrace() as $frame) {
-			$args = "";
+			$args = '';
 			if (isset($frame['args'])) {
 				$args = array();
 				foreach ($frame['args'] as $arg) {
@@ -516,7 +561,7 @@ namespace G {
 							$args[] = "'" . $arg . "'";
 						break;
 						case is_array($arg):
-							$args[] = "Array";
+							$args[] = 'Array';
 						break;
 						case is_null($arg):
 							$args[] = 'NULL';
@@ -567,11 +612,7 @@ namespace G {
 	 
 	function fraction_to_decimal($fraction) {
 		list($top, $bottom) = explode('/', $fraction);
-		if($bottom !== 0) {
-			return $top / $bottom;
-		} else {
-			return $fraction;
-		}
+		return $bottom == 0 ? $fraction : ($top / $bottom);
 	}
 	
 	/**
@@ -661,6 +702,12 @@ namespace G {
 		return $diff/$timeconstant[$format];
 	}
 	
+	function datetime_sub($datetime, $sub) {
+		$datetime = new \DateTime($datetime);
+		$datetime->sub(new \DateInterval($sub));
+		return $datetime->format('Y-m-d H:i:s');
+	}
+	
 	/**
 	 * CLIENT
 	 * ---------------------------------------------------------------------
@@ -670,11 +717,12 @@ namespace G {
 		
 		 $client_ip = NULL;
 		
-		if($_SERVER['HTTP_X_FORWARDED_FOR'] !== ''){
+		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+			
 			$client_ip =  !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ( !empty($_ENV['REMOTE_ADDR']) ? $_ENV['REMOTE_ADDR'] : $client_ip);
 
 			$entries = preg_split('/[, ]/', $_SERVER['HTTP_X_FORWARDED_FOR']);
-
+			
 			reset($entries);
 			while(list(, $entry) = each($entries)) {
 				$entry = trim($entry);
@@ -688,7 +736,7 @@ namespace G {
 
 					$found_ip = preg_replace($private_ip, $client_ip, $ip_list[1]);
 
-					if($client_ip != $found_ip and !isset($_SERVER['HTTP_CF_CONNECTING_IP'])){
+					if($client_ip != $found_ip) { //  and !isset($_SERVER['HTTP_CF_CONNECTING_IP']
 						$client_ip = $found_ip;
 						break;
 					}
@@ -931,6 +979,10 @@ namespace G {
 		return preg_match('/#' . ($prefix ? '?' : NULL) . '([\da-fA-F]{2})([\da-fA-F]{2})([\da-fA-F]{2})/', $string);
 	}
 	
+	function is_valid_ip($ip) {
+		return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) or filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
+	}
+	
 	/**
 	 * SANITIZATION
 	 * ---------------------------------------------------------------------
@@ -970,18 +1022,19 @@ namespace G {
 	}
 	
 	// Original PHP code by Chirp Internet: www.chirp.com.au
-	// Please acknowledge use of this code by including this header.
-	function truncate($string, $limit, $break=".", $pad="...") {
-	  // return with no change if string is shorter than $limit
-	  if(strlen($string) <= $limit) return $string;
-	  // is $break present between $limit and the end of the string?
-	  if(false !== ($breakpoint = strpos($string, $break, $limit))) {
-	    if($breakpoint < strlen($string) - 1) {
-	      $string = substr($string, 0, $breakpoint) . $pad;
-	    }
-	  }
-
-	  return $string;
+	function truncate($string, $limit, $break=NULL, $pad='...') {
+		$encoding = 'UTF-8';
+		if(mb_strlen($string, $encoding) <= $limit) return $string;
+		if(is_null($break) or $break == '') {
+			$string = mb_substr($string, 0, $limit - strlen($pad), $encoding) . $pad;
+		} else {
+			if(false !== ($breakpoint = strpos($string, $break, $limit))) {
+				if($breakpoint < mb_strlen($string, $encoding) - 1) {
+					$string = mb_substr($string, 0, $breakpoint, $encoding) . $pad;
+				}
+			}
+		}
+		return $string;
 	}
 	
 	// Thanks to http://www.evaisse.net/2008/php-translit-remove-accent-unaccent-21001
@@ -1136,7 +1189,7 @@ namespace G {
 	}
 
 	/**
-	 * BYTE HANDLING
+	 * BYTE AND NUMBER HANDLING
 	 * ---------------------------------------------------------------------
 	 */
 
@@ -1181,7 +1234,7 @@ namespace G {
 	function get_ini_bytes($size) {
 		return get_bytes($size, -1);
 	}
-
+	
 
 	/**
 	 * PATHS AND URL HANDLING
@@ -1282,8 +1335,8 @@ namespace G {
 	}
 
 	function get_base_url($path='') {
-		$return = G_ROOT_URL . rtrim($path, '/');
-		return $return;
+		$return = G_ROOT_URL . sanitize_relative_path($path);
+		return rtrim($return, '/');
 	}
 	
 	function get_current_url() {
@@ -1292,21 +1345,31 @@ namespace G {
 	
 	function settings_has_db_info() {
 		$settings = get_global('settings');
-		$has = true;
-		foreach(['db_driver', 'db_host', 'db_name', 'db_user'] as $v) {
-			if(!isset($settings[$v])) {
-				$has = false;
+		if(!is_array($settings)) return FALSE;
+		$has = TRUE;
+		foreach(['db_driver', 'db_host', 'db_name', 'db_user'] as $k) {
+			if(!array_key_exists($k, $settings)) {
+				$has = FALSE;
 				break;
 			}
 		}
 		return $has;
 	}
 	
+	function get_regex_match($regex, $delimiter='/', $subject, $key=NULL) {
+		preg_match($delimiter . $regex . $delimiter, $subject, $matches);
+		if(array_key_exists($key, $matches)) {
+			return $matches[$key];
+		} else {
+			return $matches;
+		}
+	}
+	
 	/**
-	 * Fetch the contents from an url
+	 * Fetch the contents from an URL
 	 * if $file is set the downloaed file will be saved there
 	 */
-	function fetch_url($url, $file='') {
+	function fetch_url($url, $file=NULL) {
 		if(!$url) {
 			throw new \Exception('missing $url in G\fetch_url');
 			return false;
@@ -1317,9 +1380,20 @@ namespace G {
 			return false;
 		}
 		
+		$version = curl_version();
+		$ssl_supported = ($version['features'] & CURL_VERSION_SSL);
+			
 		//$url = preg_replace('/^https/', 'http', $url, 1);
 		
-		if(function_exists('curl_init')) {
+		// File get contents is the default fn
+		$fn = ini_get('allow_url_fopen') ? 'fgc' : 'curl'; 
+		
+		// If fgc isn't available, lets try to use cURL
+		if($fn == 'curl' and !function_exists('curl_init')) {
+			throw new \Exception("Neither file_get_contents or cURL can be used to fetch the URL.");
+		}
+		
+		if($fn == 'curl') {
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
@@ -1330,6 +1404,7 @@ namespace G {
 			curl_setopt($ch, CURLOPT_HEADER, 0);
 			curl_setopt($ch, CURLOPT_FAILONERROR, 0);
 			curl_setopt($ch, CURLOPT_ENCODING, 'gzip'); // this needs zlib output compression enabled (php)
+			curl_setopt($ch, CURLOPT_VERBOSE, 1);
 			
 			if($file) {
 				// Save the file to $file destination
@@ -1346,22 +1421,23 @@ namespace G {
 				$file_get_contents = @curl_exec($ch);
 				
 			}
-			
+
 			if(curl_errno($ch)) {
+				$curl_error = curl_error($ch);
 				curl_close($ch);
-				throw new \Exception('curl error: ' . curl_error($ch));
+				throw new \Exception('curl error: ' . $curl_error);
 				return false;
 			}
 			
-			if($file == '') {
+			if($file == NULL) {
 				curl_close($ch);
 				return $file_get_contents;
 			}
 			
 		} else {
-			$result = file_get_contents($url);
+			$result = @file_get_contents($url);
 			
-			if($result === false) {
+			if(!$result) {
 				throw new \Exception("file_get_contents: can't fetch target URL");
 				return false;
 			}
@@ -1379,7 +1455,7 @@ namespace G {
 		
 	}
 	
-	function getUrlHeaders($url) {
+	function getUrlHeaders($url, $options=[]) {
 		$ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, 1);
@@ -1388,6 +1464,15 @@ namespace G {
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36');
+		
+		// Inject custom options
+		if(is_array($options)) {
+			foreach($options as $k => $v) {
+				curl_setopt($ch, $k, $v);
+			}
+		}
+		
 		$raw = curl_exec($ch);
         $return = curl_getinfo($ch);
 		$return['raw'] = $raw;
@@ -1584,7 +1669,8 @@ namespace G {
 			'extension' => mime_to_extension($mime),
 			'bits'		=> $info['bits'],
 			'channels'	=> $info['channels'],
-			'url'		=> absolute_to_url($file)
+			'url'		=> absolute_to_url($file),
+			'md5'		=> md5_file($file)
 		);
 	}
 	
@@ -1767,9 +1853,10 @@ namespace G {
 				imagecopy($cut, $src_im, 0, 0, $src_x, $src_y, $src_w, $src_h);
 				imagecopymerge($dst_im, $cut, $dst_x, $dst_y, 0, 0, $src_w, $src_h, $pct);
 			}
+			
+			imagedestroy($cut);
 		}
 		
-		imagedestroy($cut);
 		imagedestroy($src_im);
 
 	}
@@ -1984,7 +2071,7 @@ namespace G {
 	function json_prepare() {
 		if(is_development_env()) return;
 		if($_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest') {
-			json_output();
+			Render\json_output();
 		}
 	}
 

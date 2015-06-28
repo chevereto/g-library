@@ -24,7 +24,7 @@ use Exception;
  
 class Handler {
 
-	public static $route, $route_request, $route_name, $base_request, $doctitle, $vars, $cond, $routes, $template_used, $prevented_route;
+	public static $route, $route_request, $route_name, $base_request, $doctitle, $vars, $conds, $routes, $template_used, $prevented_route, $mapped_args;
 	
 	/**
 	 * Build a valid request
@@ -39,7 +39,7 @@ class Handler {
 		$this->relative_root = G_ROOT_PATH_RELATIVE; // nota: realmente necesitamos estos this?
 		$this->base_url = G_ROOT_URL;
 		$this->path_theme = G_APP_PATH_THEME;
-
+		
 		// Parse the request
 		$this->request_uri = $_SERVER['REQUEST_URI'];
 		$this->script_name = $_SERVER['SCRIPT_NAME'];
@@ -98,15 +98,15 @@ class Handler {
 			$this->baseRedirection($this->canonical_request);
 		}
 		
-		self::$route_request = $this->request_array;
-		self::$route = $this->template !== 404 ? $this->request_array[0] == '/' ? 'index' : $this->request_array : 404;
-		
 		if(in_array(self::$base_request, ['', 'index.php', '/'])) {
 			self::$base_request = 'index';
 		}
 		
 		$this->template = self::$base_request;
 		$this->request = $this->request_array;
+		
+		self::$route_request = $this->request_array;
+		self::$route = $this->template !== 404 ? $this->request_array[0] == '/' ? 'index' : $this->request_array : 404;
 		
 		unset($this->request[0]);
 		$this->request = array_values($this->request);
@@ -115,7 +115,7 @@ class Handler {
 		if(is_array($hook) and is_callable($hook['before'])) {
 			$hook['before']($this);
 		}
-		
+
 		// It is a valid request on index.php?
 		if($this->isIndex()) $this->processRequest();
 		
@@ -131,8 +131,8 @@ class Handler {
 			}
 		}
 		// Auto-bind the route conditionals
-		if(is_array(self::$cond)) {
-			foreach(self::$cond as $k => $v) {
+		if(is_array(self::$conds)) {
+			foreach(self::$conds as $k => $v) {
 				$this->bindIsFn($k, $v);
 			}
 		}
@@ -224,7 +224,7 @@ class Handler {
 		if($this->template == 404) {
 			self::$route = 404;
 		}
-		self::setCond('404', $this->template == 404);
+		self::setCond('404', $this->template == 404); // is_404 binding
 		
 		if(self::$vars['pre_doctitle']) {
 			$stock_doctitle = self::$vars['doctitle'];
@@ -254,7 +254,7 @@ class Handler {
 	public function bindIsFn($var, $value) {
 		$fn_name = strtolower(str_replace('-', '_', $var));
 		if(!function_exists('is_' . $fn_name)) {
-			eval('function is_' . $fn_name . '(){ return G\Handler::$cond["' . $var . '"]; }');
+			eval('function is_' . $fn_name . '(){ return G\Handler::$conds["' . $var . '"]; }');
 		}
 	}
 	
@@ -265,6 +265,7 @@ class Handler {
 		set_status_header(404);
 		if($this->getCond('mapped_route')) {
 			self::$base_request = self::$route_request[0];
+			self::$route_name = 404;
 		}
 		$this->template = 404;
 	}
@@ -309,10 +310,13 @@ class Handler {
 	/**
 	 * Maps the current route, useful to make route aliases
 	 */
-	public function mapRoute($route_name) {
+	public function mapRoute($route_name, $args=NULL) {
 		$this->template = $route_name;
 		self::$base_request = $route_name;
 		self::setCond('mapped_route', true);
+		if(!is_null($args)) {
+			self::$mapped_args = $args;
+		}
 		return $this->getRouteFn($route_name);
 	}
 	
@@ -340,23 +344,40 @@ class Handler {
 	}
 	
 	/**
-	 * load the setted (or argumented) template
+	 * load the setted (or argument) template view
 	 */
 	private function loadTemplate($template=NULL) {
 		if(!is_null($template)) {
 			$this->template = $template;
 		}
-		if(file_exists($this->path_theme . 'functions.php')) require_once($this->path_theme . 'functions.php');
-		$template_file = [
-			$this->path_theme . 'views/'. $this->template . '.php',
-			$this->path_theme. $this->template . '.php'
+		
+		/** Overrides are loaded from highest to lowest priority **/
+		
+		$functions_basename = 'functions.php';
+		$template_functions = [
+			$this->path_theme . 'overrides/' . $functions_basename,
+			$this->path_theme . $functions_basename
+		];
+		foreach($template_functions as $file) {
+			if(file_exists($file)) {
+				require_once($file);
+				break;
+			}
+		}
+		
+		$view_basename = $this->template . '.php';
+		$template_file = [ 
+			$this->path_theme . 'overrides/views/' . $view_basename,
+			$this->path_theme . 'overrides/' . $view_basename,
+			$this->path_theme . 'views/'. $view_basename,
+			$this->path_theme . $view_basename,
 		];
 		foreach($template_file as $file) {
 			if(file_exists($file)) {
-				require_once($file);
-				return;
+				require_once($file); return;
 			}
 		}
+		
 		throw new HandlerException('Missing ' . absolute_to_relative($template_file[0]) . ' template file', 400);
 	}
 	
@@ -394,33 +415,47 @@ class Handler {
 	}
 	
 	/**
-	 * Sets a Handler::$cond -> is_cond() binding
+	 * Sets a Handler::$conds -> is_cond() binding
 	 */
-	public static function setCond($cond, $bool) {
-		self::$cond[$cond] = !$bool ? false : true;
+	public static function setCond($conds, $bool) {
+		self::$conds[$conds] = !$bool ? false : true;
 	}
 	
 	/**
-	 * Sets a multiple Handler::$cond -> is_cond() binding
+	 * Sets a multiple Handler::$conds -> is_cond() binding
 	 */
-	public static function setConds($array) {
-		foreach((array)$array as $cond => $bool) {
-			self::$cond[$cond] = !$bool ? false : true;
+	public static function setConds($array=[]) {
+		foreach((array)$array as $conds => $bool) {
+			self::$conds[$conds] = !$bool ? false : true;
 		}
 	}
 	
 	/**
-	 * Get a Handler::$var
+	 * Get a Handler::$vars[var]
 	 */
 	public static function getVar($var) {
-		return self::$vars[$var];
+		return self::getVars()[$var];
 	}
 	
 	/**
-	 * Get a Handler::$cond
+	 * Get all Handler::$vars
+	 */
+	public static function getVars() {
+		return self::$vars;
+	}
+	
+	/**
+	 * Get a Handler::$condss[cond]
 	 */
 	public static function getCond($cond) {
-		return self::$cond[$cond];
+		return self::getConds()[$cond];
+	}
+	
+	/**
+	 * Get all Handler::$conds
+	 */
+	public static function getConds() {
+		return self::$conds;
 	}
 	
 	/**

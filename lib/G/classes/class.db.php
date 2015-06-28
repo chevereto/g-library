@@ -27,11 +27,12 @@ class DB {
 	private static $instance;
 	
 	private $host = G_APP_DB_HOST;
-	private $user = G_APP_DB_USER;
-	private $pass = G_APP_DB_PASS;
 	private $port = G_APP_DB_PORT;
 	private $name = G_APP_DB_NAME;
+	private $user = G_APP_DB_USER;
+	private $pass = G_APP_DB_PASS;
 	private $driver = G_APP_DB_DRIVER;
+	
 	private $pdo_attrs;
 
 	static $dbh;
@@ -47,13 +48,17 @@ class DB {
 			
 			// PDO already connected
 			if(empty($conn) and isset(self::$dbh) and get_class(self::$dbh) == 'PDO') {
-				return true;
+				return TRUE;
 			}
 			
-			$this->pdo_attrs = $pdo_attrs;
-			
-			// Inject connection info
-			if(!empty($conn)) {
+			if(empty($conn)) {
+				// Handle default conn values (from settings)
+				foreach(['host', 'port', 'name', 'user', 'pass', 'driver'] as $k) {
+					$define = 'G_APP_DB_' . strtoupper($k);
+					$this->{$k} = defined($define) ? constant($define) : NULL;				
+				};
+			} else {
+				// Inject connection info
 				$this->host = $conn['host'];
 				$this->user = $conn['user'];
 				$this->name = $conn['name'];
@@ -61,6 +66,8 @@ class DB {
 				$this->port = $conn['port'];
 				$this->driver = $conn['driver'];
 			}
+			
+			$this->pdo_attrs = $pdo_attrs;
 
 			$pdo_connect = $this->driver . ':host=' . $this->host . ';dbname=' . $this->name;
 			if($this->port) {
@@ -90,7 +97,7 @@ class DB {
 			$this->pdo_attrs[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
 			$this->pdo_attrs[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
 			
-			// Turn off PHP error reporting just for the connection here (invalid hostnames will trigger a PHP warning)
+			// Turn off PHP error reporting just for the connection here (invalid host names will trigger a PHP warning)
 			$error_reporting = error_reporting();
 			error_reporting(0);
 			
@@ -177,8 +184,12 @@ class DB {
 		$this->query->bindValue($param, $value, $type);
 	}
 	
-	public function exec(){
+	public function exec() {
 		return $this->query->execute();
+	}
+	
+	public function fetchColumn() {
+		return $this->query->fetchColumn();
 	}
 	
 	public function closeCursor() {

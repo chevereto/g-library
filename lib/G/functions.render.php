@@ -27,6 +27,11 @@ function include_theme_file($filename) {
 	if(!file_exists($file)) {
 		$file = G_APP_PATH_THEME . $filename . '.php';
 	}
+	$override = G_APP_PATH_THEME . 'overrides/' . basename($file);
+	if(file_exists($override)) {
+		$file = $override;
+	}
+	
 	if(file_exists($file)) include($file);
 }
 
@@ -98,7 +103,7 @@ function xml_output($array=array()) {
 }
 
 // Procedural function to output an array to json
-function json_output($data=array(), $callback="") {
+function json_output($data=[], $callback=NULL) {
 	error_reporting(0);
 	//@ini_set('display_errors', false);
 	if(!ob_start('ob_gzhandler')) ob_start();
@@ -110,14 +115,14 @@ function json_output($data=array(), $callback="") {
 	// Invalid json request
 	if(!G\check_value($data) || (G\check_value($callback) and preg_match('/\W/', $callback))) { // note: revisar los codigos
 		G\set_status_header(400);
-		$json_fail = array(
+		$json_fail = [
 			'status_code' => 400,
 			'status_txt' => G\get_set_status_header_desc(400),
-			'error' => array(
+			'error' => [
 				'message' => 'no request data present',
-				'code' => null
-			)
-		);
+				'code' => NULL
+			]
+		];
 		die(json_encode($json_fail));
 	}
 	
@@ -126,12 +131,27 @@ function json_output($data=array(), $callback="") {
 		$data['status_txt'] = G\get_set_status_header_desc($data['status_code']);
 	}
 	
+	$json_encode = json_encode($data);
+	
+	if(!$json_encode) { // Json failed
+		G\set_status_header(500);
+		$json_fail = [
+			'status_code' => 500,
+			'status_txt' => G\get_set_status_header_desc(500),
+			'error' => [
+				'message' => "data couldn't be encoded into json",
+				'code' => NULL
+			]
+		];
+		die(json_encode($json_fail));
+	}
+	
 	G\set_status_header($data['status_code']);
 	
-	if(G\check_value($callback)) {
-		print sprintf('%s(%s);', $callback, json_encode($data));
+	if(!is_null($callback)) {
+		print sprintf('%s(%s);', $callback, $json_encode);
 	} else {
-		print json_encode($data);
+		print $json_encode;
 	}
 	die();
 }
