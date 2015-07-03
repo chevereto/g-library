@@ -31,7 +31,6 @@ function include_theme_file($filename) {
 	if(file_exists($override)) {
 		$file = $override;
 	}
-	
 	if(file_exists($file)) include($file);
 }
 

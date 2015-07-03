@@ -128,8 +128,8 @@ class Gettext {
 	 *
 	 * @return translated string
 	 */
-    public function ngettext($msg, $msg_plural, $count) {
-		if(empty($msg) or empty($msg_plural) or !is_int($count)) {
+    public function ngettext($msg, $msg_plural, $count=0) {
+		if(empty($msg) or empty($msg_plural) or !is_numeric($count)) {
 			return $msg;
 		}
         if(!$this->parsed) $this->parseFile();
@@ -140,7 +140,7 @@ class Gettext {
 		}
 		
 		$translated = $count == 1 ? $msg : $msg_plural; // Failover
-
+		
 		if(array_key_exists($msg, $this->translation_table)) {
 			$plural_index = $this->getPluralIndex($count);
 			$index_id = $plural_index !== FALSE ? $plural_index : $count - 1;
