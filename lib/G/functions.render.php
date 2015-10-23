@@ -24,10 +24,11 @@ use G;
 
 function include_theme_file($filename) {
 	$file = G_APP_PATH_THEME . $filename;
+	$override = G_APP_PATH_THEME . 'overrides/' . $filename;
 	if(!file_exists($file)) {
-		$file = G_APP_PATH_THEME . $filename . '.php';
+		$file .= '.php';
+		$override .= '.php';
 	}
-	$override = G_APP_PATH_THEME . 'overrides/' . basename($file);
 	if(file_exists($override)) {
 		$file = $override;
 	}
@@ -112,7 +113,7 @@ function json_output($data=[], $callback=NULL) {
 	header('Content-type: application/json; charset=UTF-8');
 	
 	// Invalid json request
-	if(!G\check_value($data) || (G\check_value($callback) and preg_match('/\W/', $callback))) { // note: revisar los codigos
+	if(!G\check_value($data) || (G\check_value($callback) and preg_match('/\W/', $callback))) {
 		G\set_status_header(400);
 		$json_fail = [
 			'status_code' => 400,
@@ -144,7 +145,6 @@ function json_output($data=[], $callback=NULL) {
 		];
 		die(json_encode($json_fail));
 	}
-	
 	G\set_status_header($data['status_code']);
 	
 	if(!is_null($callback)) {

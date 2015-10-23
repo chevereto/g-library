@@ -306,7 +306,7 @@ namespace G {
 	}
 	
 	function nullify_string(&$string) {
-		if($string == '') {
+		if(is_string($string) and $string == '') {
 			$string = NULL;
 		}
 	}
@@ -702,12 +702,47 @@ namespace G {
 		return $diff/$timeconstant[$format];
 	}
 	
-	function datetime_sub($datetime, $sub) {
-		$datetime = new \DateTime($datetime);
-		$datetime->sub(new \DateInterval($sub));
-		return $datetime->format('Y-m-d H:i:s');
+	function datetime_add($datetime, $add) {
+		return datetime_alter($datetime, $add, 'add');
 	}
-	
+    
+    function datetime_sub($datetime, $sub) {
+		return datetime_alter($datetime, $sub, 'sub');
+	}
+    
+    function datetime_modify($datetime, $var) {
+		return datetime_alter($datetime, $var, 'modify');
+	}
+    
+    function datetime_alter($datetime, $var, $action='add') {
+        if(!in_array($action, ['add', 'sub', 'modify'])) {
+            return $datetime;
+        }
+        try {
+            $datetime = new \DateTime($datetime);
+            if($action=='modify') {
+                $datetime->$action($var);
+            } else {
+                $interval = dateinterval($var); // With validation
+                if(!$interval) {
+                    return $datetime;
+                }
+                $datetime->$action($interval);
+            }
+            return $datetime->format('Y-m-d H:i:s');
+        } catch(\Exception $e) {
+            throw new Exception($e->getMessage() . ' in ' . __FUNCTION__ . ' (' . $action . ')', $e->getCode());
+        }
+    }
+    
+    function dateinterval($var) {
+        try {
+            $di = new \DateInterval($var);
+            return $di;
+        } catch(\Exception $e) {}
+        return FALSE;
+    }
+
 	/**
 	 * CLIENT
 	 * ---------------------------------------------------------------------
@@ -780,8 +815,11 @@ namespace G {
 				return 0;
 			}
 		};
-
-		uksort($lang2pref, $cmpLangs);
+		
+		// Just in case the server is running eAccelerator
+		if(is_callable($cmpLangs)) {
+			uksort($lang2pref, $cmpLangs);
+		}
 
 		if ($getSortedList) {
 			return $lang2pref;
@@ -1178,11 +1216,11 @@ namespace G {
 	// Safe for HTML output
 	function safe_html($var) {
 		if(!is_array($var)) {
-			return $var === NULL ? NULL : htmlentities($var, ENT_QUOTES, 'UTF-8');
+			return $var === NULL ? NULL : htmlspecialchars($var, ENT_QUOTES, 'UTF-8'); // htmlspecialchars keeps ñ, á and all the UTF-8 valid chars
 		}
 		$safe_array = array();
 		foreach($var as $k => $v) {
-			$safe_array[$k] = is_array($v) ? safe_html($v) : ($v === NULL ? NULL : htmlentities($v, ENT_QUOTES, 'UTF-8'));
+			$safe_array[$k] = is_array($v) ? safe_html($v) : ($v === NULL ? NULL : htmlspecialchars($v, ENT_QUOTES, 'UTF-8'));
 			
 		}
 		return $safe_array;
@@ -1435,7 +1473,10 @@ namespace G {
 			}
 			
 		} else {
-			$result = @file_get_contents($url);
+            $context = stream_context_create([
+                'http' => ['ignore_errors' => TRUE],
+            ]);
+			$result = @file_get_contents($url, FALSE, $context);
 			
 			if(!$result) {
 				throw new \Exception("file_get_contents: can't fetch target URL");
@@ -1746,40 +1787,44 @@ namespace G {
 	
 	/**
 	 * Get a safe filename
-	 * $method: original | random | mixed
-	 * $original_filename: name of the original file
+	 * $method: original | random | mixed | id
+	 * $filename: name of the original file
 	 */
-	function get_filename_by_method($method, $original_filename) {
+	function get_filename_by_method($method, $filename) {
 
 		$max_lenght = 200;
 		
-		$extension = get_file_extension($original_filename);
-		$original_filename = substr($original_filename, 0, -(strlen($extension) + 1));
-		$original_filename = unaccent_string($original_filename); // change áéíóú to aeiou
-		$original_filename = preg_replace('/[^\.\w\d-]/i', '', $original_filename); // remove any non alphanumeric, non underscore, non hyphen and non period
-		
+		$extension = get_file_extension($filename);
+		$clean_filename = substr($filename, 0, -(strlen($extension) + 1));
+		$clean_filename = unaccent_string($clean_filename); // change áéíóú to aeiou
+		$clean_filename = preg_replace('/[^\.\w\d-]/i', '', $clean_filename); // remove any non alphanumeric, non underscore, non hyphen and non period
+
 		// Non alphanumeric name uh..
-		if(strlen($original_filename) == 0) {
-			$original_filename = random_string(16);
+		if(strlen($clean_filename) == 0) {
+			$clean_filename = random_string(16);
 		}
 		
-		$original_filename = substr($original_filename, 0, 200);
+		$unlimited_filename = $clean_filename; // No max_lenght limit		
+		$clean_filename = substr($clean_filename, 0, $max_lenght);
 
 		switch($method){
 			default:
 			case 'original':
-				$name = $original_filename;
+				$name = $clean_filename;
 			break;
 			case 'random':
 				$name = random_string(32);
 			break;
 			case 'mixed':
-				if(strlen($original_filename) >= $max_lenght) {
-					$name = substr($original_filename, 0, $max_lenght - 5);
+				if(strlen($clean_filename) >= $max_lenght) {
+					$name = substr($clean_filename, 0, $max_lenght - 5);
 				} else {
-					$name = $original_filename;
+					$name = $clean_filename;
 				}
 				$name .= random_string(5);
+			break;
+			case 'id':
+				$name = $unlimited_filename;
 			break;
 		}
 		
@@ -1789,6 +1834,9 @@ namespace G {
 	
 	function name_unique_file($path, $method='original', $filename) {
 		$file = $path . get_filename_by_method($method, $filename);
+		if($method == 'id') {
+			return $file;
+		}
 		while(file_exists($file)) {
 			if($method == 'original') $method = 'mixed';
 			$file = $path . get_filename_by_method($method, $filename);
@@ -2071,7 +2119,7 @@ namespace G {
 	function json_prepare() {
 		if(is_development_env()) return;
 		if($_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest') {
-			Render\json_output();
+			Render\json_output(['status_code' => 400]);
 		}
 	}
 

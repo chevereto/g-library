@@ -18,7 +18,7 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.25');
+define('G_VERSION', '1.0.26');
 
 // Error reporting setup
 @ini_set('log_errors', TRUE);
@@ -29,6 +29,10 @@ error_reporting(E_ALL ^ E_NOTICE);
 
 // Can work with sessions?
 if(!@session_start()) die("G\: This server can't work with sessions.");
+
+// Are sessions working properly?
+$_SESSION['G'] = TRUE;
+if(!$_SESSION['G']) die("G\: Sessions are not working properly. Check for any conflicting server setting.");
 
 // Set the starting execution time
 define('G_APP_TIME_EXECUTION_START', microtime(true));

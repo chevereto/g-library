@@ -143,7 +143,7 @@ class Gettext {
 		
 		if(array_key_exists($msg, $this->translation_table)) {
 			$plural_index = $this->getPluralIndex($count);
-			$index_id = $plural_index !== FALSE ? $plural_index : $count - 1;
+			$index_id = $plural_index !== FALSE ? $plural_index : ($count - 1);
 			$table = $this->translation_table[$msg];
 			if(array_key_exists($index_id, $table)) {
 				$translated = $table[$index_id];
@@ -262,7 +262,7 @@ class Gettext {
      */	
 	private function parsePluralData($header) {
 		// Detect plural data. If nothing found then use general plural handling
-		if(preg_match('/\s*nplurals\s*=\s*(\d+)\s*;\s*plural\s*=\s*(\(.*\))\s*;/', $header, $matches)) {
+		if(preg_match('/\s*nplurals\s*=\s*(\d+)\s*;\s*plural\s*=\s*(\({0,1}.*\){0,1})\s*;/', $header, $matches)) {
 			$plurals = [(int)$matches[1], $matches[2]];
 		} else {
 			$plurals = [2, '(n != 1)']; // Base english-like plural languages
@@ -275,6 +275,7 @@ class Gettext {
 		
 		// Generate the translation_plural array
 		$formula = str_replace('n', '$n', $formula);
+		
 		$function = "\$index = (int)($formula); return (\$index < $nplurals) ? \$index : $nplurals - 1;";
 		
 		// Stock everything

@@ -463,10 +463,11 @@ class Handler {
 	 */
 	public static function updateVar($var, $value) {
 		if(is_array(self::$vars[$var]) and is_array($value)) {
-			self::$vars[$var] = array_merge(self::$vars[$var], $value);
-		} else {
-			self::$vars[$var] = $value;
+			//self::$vars[$var] = array_merge(self::$vars[$var], $value);
+			$value += self::$vars[$var]; // replacement + replaced
+			ksort($value);
 		}
+		self::$vars[$var] = $value;
 	}
 	
 	/**

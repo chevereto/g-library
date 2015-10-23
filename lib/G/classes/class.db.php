@@ -196,7 +196,7 @@ class DB {
 		return $this->query->closeCursor();
 	}
 
-	public function fetchAll($mode=PDO::FETCH_ASSOC){
+	public function fetchAll($mode=PDO::FETCH_ASSOC) {
 		$this->exec();
 		return $this->query->fetchAll(is_int($mode) ? $mode : PDO::FETCH_ASSOC);
 	}
@@ -205,7 +205,7 @@ class DB {
 	 * Execute and returns the single result from the prepared statement
 	 * http://php.net/manual/en/pdostatement.fetch.php
 	 */
-	public function fetchSingle($mode=PDO::FETCH_ASSOC){
+	public function fetchSingle($mode=PDO::FETCH_ASSOC) {
 		$this->exec();
 		return $this->query->fetch(is_int($mode) ? $mode : PDO::FETCH_ASSOC);
 	}
@@ -374,7 +374,6 @@ class DB {
 					$db->bind(':'.$k, $v);
 				}
 			}
-			$db->exec();
 			return $limit == 1 ? $db->fetchSingle($fetch_style) : $db->fetchAll($fetch_style);
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
