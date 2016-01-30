@@ -344,6 +344,19 @@ class Handler {
 	}
 	
 	/**
+	 * Hook code for loadTemplate()
+	 * @args ['code' => '<code>', 'where' => 'before|after']
+	 */
+	public function hookTemplate($args=[]) {
+		if(in_array($args['where'], ['before', 'after']) and $args['code']) {
+			if(!isset($this->hook_template)) {
+				$this->hook_template = [];
+			}
+			$this->hook_template[$args['where']] = $args['code'];
+		}
+	}
+	
+	/**
 	 * load the setted (or argument) template view
 	 */
 	private function loadTemplate($template=NULL) {
@@ -365,7 +378,12 @@ class Handler {
 			}
 		}
 		
-		$view_basename = $this->template . '.php';
+		$view_basename = $this->template;
+		$view_extension = get_file_extension($this->template);
+		if(!$view_extension) {
+			$view_extension = 'php';
+			$view_basename .= '.php';
+		}
 		$template_file = [ 
 			$this->path_theme . 'overrides/views/' . $view_basename,
 			$this->path_theme . 'overrides/' . $view_basename,
@@ -374,11 +392,31 @@ class Handler {
 		];
 		foreach($template_file as $file) {
 			if(file_exists($file)) {
-				require_once($file); return;
+				if($view_extension == 'html') {
+					Render\include_theme_header();
+				}
+				if($this->hook_template['before']) {
+					echo $this->hook_template['before'];
+				}
+				if($view_extension == 'php') {
+					require_once($file);
+				} else {
+					echo file_get_contents($file);
+				}
+				if($this->hook_template['after']) {
+					echo $this->hook_template['after'];
+				}
+				if($view_extension == 'html') {
+					Render\include_theme_footer();
+				}
+				return;
 			}
 		}
 		
-		throw new HandlerException('Missing ' . absolute_to_relative($template_file[0]) . ' template file', 400);
+		$end = end($template_file);
+		$key = key($template_file);
+		
+		throw new HandlerException('Missing ' . absolute_to_relative($template_file[$key]) . ' template file', 400);
 	}
 	
 	/**

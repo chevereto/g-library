@@ -160,6 +160,10 @@ class DB {
 		$this->query = self::$dbh->prepare($query);
 	}
 	
+	public function errorInfo() {
+		return self::$dbh->errorInfo();
+	}
+	
 	/**
 	 * Binds a value to a corresponding named or question mark placeholder in the SQL statement that was used to prepare the statement
 	 * http://php.net/manual/en/pdostatement.bindvalue.php
@@ -211,13 +215,13 @@ class DB {
 	}
 	
 	/**
-	 * Query and exec
+	 * Query and exec, return number of affected rows or FALSE
 	 */
 	public static function queryExec($query) {
 		try {
 			$db = self::getInstance();
 			$db->query($query);
-			return $db->exec();
+			return $db->exec() ? $db->rowCount() : FALSE;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -423,7 +427,7 @@ class DB {
 				$db->bind(':where_'.$k, $v);
 			}
 			
-			return $db->exec() ? $db->rowCount() : false;
+			return $db->exec() ? $db->rowCount() : FALSE;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -456,7 +460,7 @@ class DB {
 			foreach($values as $k => $v) {
 				$db->bind(':'.$k, $v);
 			}
-			return $db->exec() ? $db->lastInsertId() : false;
+			return $db->exec() ? $db->lastInsertId() : FALSE;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}
@@ -466,6 +470,7 @@ class DB {
 	/**
 	 * Update target numecic table row(s) with and increment (positive or negative)
 	 * Returns the number of affected rows or false
+	 * Note: this should add a BASE value (like "0" to avoid negative values if set)
 	 */
 	public static function increment($table, $values, $wheres, $clause='AND') {
 		
@@ -535,7 +540,7 @@ class DB {
 			foreach($values as $k => $v) {
 				$db->bind(':'.$k, $v);
 			}
-			return $db->exec() ? $db->rowCount() : false;
+			return $db->exec() ? $db->rowCount() : FALSE;
 		} catch(Exception $e) {
 			throw new DBException($e->getMessage(), 400);
 		}

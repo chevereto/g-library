@@ -76,8 +76,8 @@ namespace G {
 	}
 	
 	function get_global($var) {
-		global $$var;
-		return $$var;
+		global ${$var};
+		return ${$var};
 	}
 	
 	function is_apache() {
@@ -1496,6 +1496,7 @@ namespace G {
 		
 	}
 	
+	/* get complete raw, add success + error properties */
 	function getUrlHeaders($url, $options=[]) {
 		$ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -1506,17 +1507,20 @@ namespace G {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36');
-		
 		// Inject custom options
 		if(is_array($options)) {
 			foreach($options as $k => $v) {
 				curl_setopt($ch, $k, $v);
 			}
 		}
-		
 		$raw = curl_exec($ch);
-        $return = curl_getinfo($ch);
-		$return['raw'] = $raw;
+		if(curl_errno($ch)) {
+			$return['error'] = curl_error($ch);
+			$return['http_code'] = 500;
+		} else {
+			$return = curl_getinfo($ch);
+			$return['raw'] = $raw;
+		}
         curl_close($ch);
 		return $return;
 	}
