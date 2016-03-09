@@ -1036,6 +1036,10 @@ namespace G {
 		return preg_replace('#/+#','/', $path);
 	}
 	
+	function sanitize_directory_separator($path) {
+		return preg_replace('#' . DIRECTORY_SEPARATOR . '+#', DIRECTORY_SEPARATOR , $path);
+	}
+	
 	function sanitize_relative_path($path) {
 		$clean = forward_slash($path);
 		$clean = sanitize_path_slashes($path);

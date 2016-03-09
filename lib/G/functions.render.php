@@ -82,7 +82,9 @@ function get_input_auth_token($name='auth_token') {
 function xml_output($array=array()) {
 	error_reporting(0);
 	//@ini_set('display_errors', false);
-	if(!ob_start('ob_gzhandler')) ob_start();
+	if(ob_get_level() === 0 and !ob_start('ob_gzhandler')) {
+		ob_start();
+	}
 	header("Last-Modified: ".gmdate("D, d M Y H:i:s")."GMT");
 	header("Cache-Control: no-cache, must-revalidate");
 	header("Pragma: no-cache");
@@ -106,7 +108,7 @@ function xml_output($array=array()) {
 function json_output($data=[], $callback=NULL) {
 	error_reporting(0);
 	//@ini_set('display_errors', false);
-	if(!ob_start('ob_gzhandler')) ob_start();
+	if(ob_get_level() === 0 and !ob_start('ob_gzhandler')) ob_start();
 	header('Last-Modified: '.gmdate('D, d M Y H:i:s').'GMT');
 	header('Cache-Control: no-cache, must-revalidate');
 	header('Pragma: no-cache');
