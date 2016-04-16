@@ -677,6 +677,13 @@ namespace G {
 		return $string ? implode(', ', $string) . ' ago' : 'just now';
 	}
 	
+	function datetimegmt_convert_tz($datetimegmt, $tz) {
+		if(!is_valid_timezone($tz)) return $datetimegmt;
+		$date = new \DateTime($datetimegmt . "+00");
+		$date->setTimezone(new \DateTimeZone($tz));
+		return $date->format('Y-m-d H:i:s');
+	}
+	
 	// Returns the difference between two dates in the given format (default seconds)
 	function datetime_diff($older, $newer=NULL, $format='s') {
 		
@@ -1218,14 +1225,13 @@ namespace G {
 	}
 	
 	// Safe for HTML output
-	function safe_html($var) {
+	function safe_html($var, $flag=ENT_QUOTES) {
 		if(!is_array($var)) {
-			return $var === NULL ? NULL : htmlspecialchars($var, ENT_QUOTES, 'UTF-8'); // htmlspecialchars keeps ñ, á and all the UTF-8 valid chars
+			return $var === NULL ? NULL : htmlspecialchars($var, $flag, 'UTF-8'); // htmlspecialchars keeps ñ, á and all the UTF-8 valid chars
 		}
 		$safe_array = array();
 		foreach($var as $k => $v) {
-			$safe_array[$k] = is_array($v) ? safe_html($v) : ($v === NULL ? NULL : htmlspecialchars($v, ENT_QUOTES, 'UTF-8'));
-			
+			$safe_array[$k] = is_array($v) ? safe_html($v) : ($v === NULL ? NULL : htmlspecialchars($v, $flag, 'UTF-8'));
 		}
 		return $safe_array;
 	}
@@ -1428,7 +1434,7 @@ namespace G {
 		//$url = preg_replace('/^https/', 'http', $url, 1);
 		
 		// File get contents is the default fn
-		$fn = ini_get('allow_url_fopen') ? 'fgc' : 'curl'; 
+		$fn = (ini_get('allow_url_fopen') ? 'fgc' : 'curl'); 
 		
 		// If fgc isn't available, lets try to use cURL
 		if($fn == 'curl' and !function_exists('curl_init')) {
