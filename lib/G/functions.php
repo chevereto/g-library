@@ -16,6 +16,8 @@
 
 namespace G {
 	
+	use Exception;
+	
 	/**
 	 * ROUTE HELPERS
 	 * ---------------------------------------------------------------------
@@ -405,7 +407,6 @@ namespace G {
 	}
 	
 	// Linkify functions borrowed from https://github.com/misd-service-development/php-linkify
-	
 	function linkify($text, array $options = array()) {
          $attr = '';
         if (true === array_key_exists('attr', $options)) {
@@ -737,7 +738,7 @@ namespace G {
                 $datetime->$action($interval);
             }
             return $datetime->format('Y-m-d H:i:s');
-        } catch(\Exception $e) {
+        } catch(Exception $e) {
             throw new Exception($e->getMessage() . ' in ' . __FUNCTION__ . ' (' . $action . ')', $e->getCode());
         }
     }
@@ -746,7 +747,7 @@ namespace G {
         try {
             $di = new \DateInterval($var);
             return $di;
-        } catch(\Exception $e) {}
+        } catch(Exception $e) {}
         return FALSE;
     }
 
@@ -757,15 +758,18 @@ namespace G {
 	
 	function get_client_ip(){
 		
-		 $client_ip = NULL;
+		$client_ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : (!empty($_ENV['REMOTE_ADDR']) ? $_ENV['REMOTE_ADDR'] : NULL);
+		
+		if(array_key_exists('HTTP_CF_CONNECTING_IP', $_SERVER) && $_SERVER['HTTP_CF_CONNECTING_IP'] == $_SERVER['REMOTE_ADDR']) {
+			return $_SERVER['HTTP_CF_CONNECTING_IP'];
+		}
 		
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-			
-			$client_ip =  !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ( !empty($_ENV['REMOTE_ADDR']) ? $_ENV['REMOTE_ADDR'] : $client_ip);
 
-			$entries = preg_split('/[, ]/', $_SERVER['HTTP_X_FORWARDED_FOR']);
-			
+			$entries = preg_split('/[\s,]/', $_SERVER['HTTP_X_FORWARDED_FOR'], -1, PREG_SPLIT_NO_EMPTY);
+
 			reset($entries);
+
 			while(list(, $entry) = each($entries)) {
 				$entry = trim($entry);
 				if(preg_match('/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/', $entry, $ip_list)){
@@ -784,9 +788,7 @@ namespace G {
 					}
 				}
 			}
-		} else {
-			$client_ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : (!empty($_ENV['REMOTE_ADDR']) ? $_ENV['REMOTE_ADDR'] : $client_ip);
-	   }
+		}
 	 
 		return $client_ip;
 	 
@@ -1075,7 +1077,7 @@ namespace G {
 		$encoding = 'UTF-8';
 		if(mb_strlen($string, $encoding) <= $limit) return $string;
 		if(is_null($break) or $break == '') {
-			$string = mb_substr($string, 0, $limit - strlen($pad), $encoding) . $pad;
+			$string = trim(mb_substr($string, 0, $limit - strlen($pad), $encoding)) . $pad;
 		} else {
 			if(false !== ($breakpoint = strpos($string, $break, $limit))) {
 				if($breakpoint < mb_strlen($string, $encoding) - 1) {
@@ -1419,27 +1421,17 @@ namespace G {
 	 */
 	function fetch_url($url, $file=NULL) {
 		if(!$url) {
-			throw new \Exception('missing $url in G\fetch_url');
+			throw new Exception('missing $url in ' . __FUNCTION__);
 			return false;
 		}
 		
-		if(ini_get('allow_url_fopen') !== 1 and !function_exists('curl_init')) {
-			throw new \Exception("allow_url_fopen is disabled and cURL isn't installed");
-			return false;
+		if(ini_get('allow_url_fopen') !== 1 && !function_exists('curl_init')) {
+			throw new Exception("Fatal error in " .__FUNCTION__. ": cURL isn't installed and allow_url_fopen is disabled. Can't perform HTTP requests.");
+			return FALSE;
 		}
-		
-		$version = curl_version();
-		$ssl_supported = ($version['features'] & CURL_VERSION_SSL);
-			
-		//$url = preg_replace('/^https/', 'http', $url, 1);
-		
-		// File get contents is the default fn
-		$fn = (ini_get('allow_url_fopen') ? 'fgc' : 'curl'); 
-		
-		// If fgc isn't available, lets try to use cURL
-		if($fn == 'curl' and !function_exists('curl_init')) {
-			throw new \Exception("Neither file_get_contents or cURL can be used to fetch the URL.");
-		}
+
+		// File get contents is the failover fn
+		$fn = (!function_exists('curl_init') ? 'fgc' : 'curl'); 
 		
 		if($fn == 'curl') {
 			$ch = curl_init();
@@ -1447,7 +1439,7 @@ namespace G {
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($ch, CURLOPT_AUTOREFERER, 1);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 			curl_setopt($ch, CURLOPT_HEADER, 0);
 			curl_setopt($ch, CURLOPT_FAILONERROR, 0);
@@ -1458,7 +1450,7 @@ namespace G {
 				// Save the file to $file destination
 				$out = @fopen($file, 'wb');
 				if(!$out) {
-					throw new \Exception("can't open " . __FUNCTION__ . "() file for read and write");
+					throw new Exception("can't open " . __FUNCTION__ . "() file for read and write");
 					return false;
 				}
 				curl_setopt($ch, CURLOPT_FILE, $out);
@@ -1467,43 +1459,35 @@ namespace G {
 			} else {
 				// Return the file string
 				$file_get_contents = @curl_exec($ch);
-				
 			}
-
 			if(curl_errno($ch)) {
 				$curl_error = curl_error($ch);
 				curl_close($ch);
-				throw new \Exception('curl error: ' . $curl_error);
+				throw new Exception('curl error: ' . $curl_error);
 				return false;
 			}
-			
 			if($file == NULL) {
 				curl_close($ch);
 				return $file_get_contents;
 			}
-			
 		} else {
             $context = stream_context_create([
                 'http' => ['ignore_errors' => TRUE],
             ]);
 			$result = @file_get_contents($url, FALSE, $context);
-			
 			if(!$result) {
-				throw new \Exception("file_get_contents: can't fetch target URL");
+				throw new Exception("file_get_contents: can't fetch target URL");
 				return false;
 			}
-			
 			if($file) {
 				if(file_put_contents($file, $result) === false) {
-					throw new \Exception("file_put_contents: can't fetch target URL");
+					throw new Exception("file_put_contents: can't fetch target URL");
 					return false;
 				}
 			} else {
 				return $result;
 			}
-			
 		}
-		
 	}
 	
 	/* get complete raw, add success + error properties */

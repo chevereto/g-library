@@ -136,7 +136,7 @@ class Handler {
 				$this->bindIsFn($k, $v);
 			}
 		}
-				
+		
 		$this->loadTemplate();
 
 	}
@@ -308,7 +308,7 @@ class Handler {
 	}
 	
 	/**
-	 * Maps the current route, useful to make route aliases
+	 * Maps the current route which is useful to make route aliases
 	 */
 	public function mapRoute($route_name, $args=NULL) {
 		$this->template = $route_name;

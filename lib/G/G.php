@@ -18,7 +18,7 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.29');
+define('G_VERSION', '1.0.30');
 
 // Error reporting setup
 @ini_set('log_errors', TRUE);
@@ -88,6 +88,10 @@ define('G_HTTP_PROTOCOL', ((!empty($_SERVER['HTTPS']) and strtolower($_SERVER['H
 // Fix some $_SERVER vars
 $_SERVER['SCRIPT_FILENAME'] = forward_slash($_SERVER['SCRIPT_FILENAME']);
 $_SERVER['SCRIPT_NAME'] = forward_slash($_SERVER['SCRIPT_NAME']); 
+// Fix CloudFlare REMOTE_ADDR
+if(isset($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+	$_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_CF_CONNECTING_IP'];
+}
 
 // Inherit application definitions
 if(file_exists(G_APP_PATH . 'app.php')) {
@@ -95,10 +99,8 @@ if(file_exists(G_APP_PATH . 'app.php')) {
 }
 
 // Set the DB constants
-foreach(['host', 'port', 'name', 'user', 'pass', 'driver'] as $k) {
-	if($settings['db_' . $k]) {
-		define('G_APP_DB_'.strtoupper($k), $settings['db_' . $k]);
-	}
+foreach(['host', 'port', 'name', 'user', 'pass', 'driver', 'pdo_attrs'] as $k) {
+	define('G_APP_DB_' . strtoupper($k), isset($settings['db_' . $k]) ? $settings['db_' . $k] : NULL);
 }
 
 // Include app functions
