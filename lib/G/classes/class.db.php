@@ -495,9 +495,6 @@ class DB {
 		}			
 		$query = rtrim($query, $clause.' ');
 		
-		debug($query);
-		die();
-		
 		try {
 			$db = self::getInstance();
 			$db->query($query);
