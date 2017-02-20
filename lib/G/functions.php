@@ -145,7 +145,7 @@ namespace G {
         }
         return substr(bin2hex($r), 0, $length);
     }
-	
+
 	/**
 	 * A timing safe equals comparison
 	 *
@@ -1554,10 +1554,18 @@ namespace G {
 	 * CONDITIONALS
 	 * ---------------------------------------------------------------------
 	 */
-
-	// Check if the value is an integer using regex
-	function is_integer($value) {
-		return !preg_match('/\D/', $value) ? true : false;
+	
+	// Checks if $var is a positive integer using filter_var
+	function is_integer($var, $range=[]) {
+		$options = [];
+		if(!empty($range) && is_array($range)) {
+			foreach(['min', 'max'] as $k) {
+				if(is_int($range[$k])) {
+					$options['options'][$k . '_range'] = $range[$k];
+				}
+			}
+		}
+		return filter_var($var, FILTER_VALIDATE_INT, $options) !== FALSE;
 	}
 
 	// This will tell if the string is an URL
