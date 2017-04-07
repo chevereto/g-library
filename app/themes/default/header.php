@@ -8,8 +8,6 @@
 <link rel="stylesheet" href="<?php echo G\Render\get_theme_file_url('style.css'); ?>">
 <link rel="shortcut icon" href="<?php echo G\Render\get_theme_file_url('img/favicon.png'); ?>">
 <link rel="apple-touch-icon" href="<?php echo G\Render\get_theme_file_url('img/apple-touch-icon.png'); ?>" sizes="114x114">
-<link href="<?php echo G\Render\get_theme_file_url('prism.css'); ?>" rel="stylesheet">
-<script src="<?php echo G\Render\get_theme_file_url('prism.js'); ?>"></script>
 </head>
 
 <body>
