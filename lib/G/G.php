@@ -18,7 +18,7 @@ namespace G;
 
 if(!defined('access') or !access) die("This file cannot be directly accessed.");
 
-define('G_VERSION', '1.0.36');
+define('G_VERSION', '1.0.37');
 
 // Error reporting setup
 @ini_set('log_errors', TRUE);

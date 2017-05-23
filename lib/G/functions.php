@@ -728,17 +728,17 @@ namespace G {
             return $datetime;
         }
         try {
-            $datetime = new \DateTime($datetime);
+            $DateTime = new \DateTime($datetime);
             if($action=='modify') {
-                $datetime->$action($var);
+                $DateTime->$action($var);
             } else {
-                $interval = dateinterval($var); // With validation
+                $interval = dateinterval($var); // validation
                 if(!$interval) {
                     return $datetime;
                 }
-                $datetime->$action($interval);
+                $DateTime->$action($interval);
             }
-            return $datetime->format('Y-m-d H:i:s');
+            return $DateTime->format('Y-m-d H:i:s');
         } catch(Exception $e) {
             throw new Exception($e->getMessage() . ' in ' . __FUNCTION__ . ' (' . $action . ')', $e->getCode());
         }
@@ -1714,7 +1714,7 @@ namespace G {
 		$info = getimagesize($file);
 		$filesize = @filesize($file);
 		
-		if(!$info and !$filesize) return false;
+		if(!$info || !$filesize) return false;
 		
 		$mime = strtolower($info['mime']);
 		
