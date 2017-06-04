@@ -1433,10 +1433,10 @@ namespace G {
 	 * Fetch the contents from an URL
 	 * if $file is set the downloaed file will be saved there
 	 */
-	function fetch_url($url, $file=NULL) {
+	function fetch_url($url, $file=NULL, $options=[]) {
 		if(!$url) {
 			throw new Exception('missing $url in ' . __FUNCTION__);
-			return false;
+			return FALSE;
 		}
 		
 		if(ini_get('allow_url_fopen') !== 1 && !function_exists('curl_init')) {
@@ -1459,6 +1459,12 @@ namespace G {
 			curl_setopt($ch, CURLOPT_FAILONERROR, 0);
 			curl_setopt($ch, CURLOPT_ENCODING, 'gzip'); // this needs zlib output compression enabled (php)
 			curl_setopt($ch, CURLOPT_VERBOSE, 0);
+			
+			if(is_array($options) && count($options) > 0) {
+				foreach($options as $k => $v) {
+					curl_setopt($ch, $k, $v);
+				}
+			}
 			
 			if($file) {
 				// Save the file to $file destination
@@ -1711,10 +1717,13 @@ namespace G {
 
 	// Retrieves info about the current image file
 	function get_image_fileinfo($file) {
+		
+		clearstatcache($file); // http://php.net/manual/es/function.clearstatcache.php (add G\ magic for those)
+		
 		$info = getimagesize($file);
 		$filesize = @filesize($file);
 		
-		if(!$info || !$filesize) return false;
+		if(!$info || $filesize === FALSE) return FALSE;
 		
 		$mime = strtolower($info['mime']);
 		
